@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { ClassGroup, Student, Gender } from '../types';
-import { getRandomAvatar, AVATAR_POOL, generateId } from '../services/storage';
+import { getRandomAvatar, AVATAR_POOL, generateId } from '../services/storage.service';
 import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2 } from 'lucide-react';
 
 interface ClassManagerProps {

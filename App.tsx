@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand } from 'lucide-react';
-import * as Storage from './services/storage';
+import * as Storage from './services/storage.service';
 import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings } from './types';
 import ClassManager from './components/ClassManager';
 import { VisualizationContainer } from './components/Visualizers';
@@ -331,55 +331,45 @@ function App() {
 
     if (window.confirm('CẢNH BÁO: Hành động này sẽ đặt toàn bộ ĐIỂM SỐ về 0 cho lớp đang chọn.\nDanh sách học sinh sẽ được GIỮ NGUYÊN.\n\nBạn có chắc chắn muốn tiếp tục?')) {
         
-        try {
-            // 1. Get latest from storage (Source of Truth)
-            const currentStoredClasses = Storage.getClasses();
-            let classFound = false;
+        // 1. Force a read from storage to get the absolute latest state
+        const storedClasses = Storage.getClasses();
+        let classFound = false;
 
-            // 2. Modify specific class
-            const updatedClasses = currentStoredClasses.map(c => {
+        // 2. Map and reset
+        const updatedClasses = storedClasses.map(c => {
+            if (c.id === activeClassId) {
+                classFound = true;
+                return {
+                    ...c,
+                    students: c.students.map(s => ({ ...s, score: 0, lastPickedDate: null }))
+                };
+            }
+            return c;
+        });
+
+        // 3. Fallback if storage was empty/unsynced (rare, but good for safety)
+        if (!classFound) {
+             const stateBasedReset = classes.map(c => {
                 if (c.id === activeClassId) {
-                    classFound = true;
-                    // Reset scores and history for all students in this class
-                    const resetStudents = c.students.map(s => ({
-                        ...s,
-                        score: 0,
-                        lastPickedDate: null
-                    }));
-                    return { ...c, students: resetStudents };
+                    return {
+                        ...c,
+                        students: c.students.map(s => ({ ...s, score: 0, lastPickedDate: null }))
+                    };
                 }
                 return c;
-            });
-
-            if (!classFound) {
-                // If not in storage (rare), try using state
-                 const fallbackClasses = classes.map(c => {
-                    if (c.id === activeClassId) {
-                        const resetStudents = c.students.map(s => ({ ...s, score: 0, lastPickedDate: null }));
-                        return { ...c, students: resetStudents };
-                    }
-                    return c;
-                 });
-                 Storage.saveClasses(fallbackClasses);
-                 setClasses(fallbackClasses);
-            } else {
-                // 3. Save to Storage
-                Storage.saveClasses(updatedClasses);
-                
-                // 4. Update State to match
-                setClasses(updatedClasses);
-            }
-
-            // Reset Session Stats
-            setSessionPoints(0);
-            setSessionPicks(0);
-
-            // Notify
-            // alert("Đã reset điểm thành công!");
-        } catch (e) {
-            console.error("Reset error", e);
-            alert("Có lỗi xảy ra khi lưu dữ liệu.");
+             });
+             Storage.saveClasses(stateBasedReset);
+             setClasses(stateBasedReset);
+        } else {
+             // 4. Save to Storage
+             Storage.saveClasses(updatedClasses);
+             // 5. Update State
+             setClasses(updatedClasses);
         }
+
+        // Reset Session Stats
+        setSessionPoints(0);
+        setSessionPicks(0);
     }
   };
 
