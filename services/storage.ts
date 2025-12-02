@@ -1,0 +1,59 @@
+
+import { ClassGroup, Settings } from '../types';
+
+const CLASSES_KEY = 'cr_classes';
+const SETTINGS_KEY = 'cr_settings';
+const ACTIVE_CLASS_KEY = 'cr_active_class_id';
+
+export const getClasses = (): ClassGroup[] => {
+  const data = localStorage.getItem(CLASSES_KEY);
+  return data ? JSON.parse(data) : [];
+};
+
+export const saveClasses = (classes: ClassGroup[]) => {
+  localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
+};
+
+export const getSettings = (): Settings => {
+  const data = localStorage.getItem(SETTINGS_KEY);
+  const defaultSettings: Settings = { 
+    maxPoints: 10, 
+    groupPoints: 20, 
+    minLuckyPoints: 1,
+    maxLuckyPoints: 5,
+    minGroupLuckyPoints: 5, // Default group min
+    maxGroupLuckyPoints: 15, // Default group max
+    spinDuration: 5,
+    raceDuration: 10, 
+    themeColor: 'indigo', 
+    allowRepeats: false,
+    soundEnabled: true
+  };
+
+  // Merge saved settings with defaults to handle missing keys in updates
+  return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
+};
+
+export const saveSettings = (settings: Settings) => {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+};
+
+export const getActiveClassId = (): string | null => {
+  return localStorage.getItem(ACTIVE_CLASS_KEY);
+};
+
+export const setActiveClassId = (id: string) => {
+  localStorage.setItem(ACTIVE_CLASS_KEY, id);
+};
+
+// Helper for IDs (Safe for all browsers)
+export const generateId = (): string => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+};
+
+// Helper for avatars
+export const AVATAR_POOL = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🦄'];
+
+export const GROUP_AVATAR_POOL = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '⚫', '⚪', '🟤', '🪐', '🌍', '🌕', '🌟', '🔥', '💧', '⚡', '🌈', '🍎', '🍇', '🍉'];
+
+export const getRandomAvatar = () => AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)];
