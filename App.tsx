@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database } from 'lucide-react';
+import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database, Maximize, Minimize } from 'lucide-react';
 import * as Storage from './services/storage.service';
 import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings } from './types';
 import ClassManager from './components/ClassManager';
@@ -18,6 +18,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   
+  // Full Screen State
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
   // Manual Pick State
   const [showManualPick, setShowManualPick] = useState(false);
   const [manualSearch, setManualSearch] = useState('');
@@ -49,6 +52,13 @@ function App() {
     setClasses(Storage.getClasses());
     const savedActiveId = Storage.getActiveClassId();
     if (savedActiveId) setActiveClassId(savedActiveId);
+
+    // Listen for fullscreen changes (e.g. user presses ESC)
+    const handleFullScreenChange = () => {
+        setIsFullScreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
   }, []);
 
   const handleUpdateClasses = (newClasses: ClassGroup[]) => {
@@ -65,6 +75,18 @@ function App() {
       const updated = { ...settings, ...newSettings };
       setSettings(updated);
       Storage.saveSettings(updated);
+  };
+
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
   };
 
   const activeClass = useMemo(() => classes.find(c => c.id === activeClassId), [classes, activeClassId]);
@@ -814,6 +836,9 @@ function App() {
                   <span className="font-bold text-lg tracking-tight text-gray-800">ClassRandomizer</span>
               </div>
               <div className="flex gap-2">
+                   <button onClick={toggleFullScreen} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="Toàn màn hình">
+                        {isFullScreen ? <Minimize size={20}/> : <Maximize size={20}/>}
+                   </button>
                    {currentView === 'SESSION' && (
                        <>
                            <button onClick={resetData} className="p-2 text-red-500 hover:bg-red-50 rounded-lg flex items-center gap-1 font-bold text-sm" title="Reset điểm">
