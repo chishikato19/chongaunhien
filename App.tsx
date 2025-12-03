@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database } from 'lucide-react';
 import * as Storage from './services/storage.service';
 import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings } from './types';
 import ClassManager from './components/ClassManager';
@@ -40,6 +40,9 @@ function App() {
   // Session Stats
   const [sessionPoints, setSessionPoints] = useState(0);
   const [sessionPicks, setSessionPicks] = useState(0);
+
+  // Refs
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialization
   useEffect(() => {
@@ -371,6 +374,69 @@ function App() {
         setSessionPoints(0);
         setSessionPicks(0);
     }
+  };
+
+  // --- Data Import/Export ---
+  const handleExportData = () => {
+      const dataToExport = {
+          version: 1,
+          date: new Date().toISOString(),
+          classes: Storage.getClasses(),
+          settings: Storage.getSettings(),
+          activeClassId: Storage.getActiveClassId()
+      };
+
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `class_randomizer_backup_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!window.confirm("CẢNH BÁO: Việc nhập dữ liệu sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại (Lớp học, Cài đặt).\n\nBạn nên 'Xuất dữ liệu' hiện tại trước khi tiếp tục.\nBạn có chắc chắn muốn nhập file này không?")) {
+          // Reset input so change event triggers again if same file selected
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          try {
+              const text = e.target?.result as string;
+              const data = JSON.parse(text);
+
+              // Basic validation
+              if (!Array.isArray(data.classes)) {
+                  throw new Error("File không hợp lệ: Không tìm thấy danh sách lớp.");
+              }
+
+              // Update Storage
+              Storage.saveClasses(data.classes);
+              if (data.settings) Storage.saveSettings(data.settings);
+              if (data.activeClassId) Storage.setActiveClassId(data.activeClassId);
+
+              // Update State
+              setClasses(data.classes);
+              setSettings(data.settings || Storage.getSettings());
+              setActiveClassId(data.activeClassId || null);
+
+              alert("Nhập dữ liệu thành công!");
+          } catch (error) {
+              console.error(error);
+              alert("Lỗi khi nhập file: File không đúng định dạng hoặc bị hỏng.");
+          } finally {
+              if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+      };
+      reader.readAsText(file);
   };
 
   const getLuckyRangeText = () => {
@@ -789,6 +855,29 @@ function App() {
                                <input type="checkbox" checked={groupModeEnabled} onChange={(e) => setGroupModeEnabled(e.target.checked)} className="w-4 h-4 accent-indigo-600"/>
                            </div>
                            <button onClick={resetData} className="w-full mt-2 text-xs text-red-400 hover:text-red-600 py-1">Reset điểm số lớp này</button>
+                      </div>
+
+                      {/* DATA IMPORT/EXPORT SECTION */}
+                      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                           <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2"><Database size={16}/> Quản lý dữ liệu</h3>
+                           <div className="grid grid-cols-2 gap-2">
+                               <button onClick={handleExportData} className="flex flex-col items-center justify-center p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100">
+                                   <Download size={20} className="mb-1"/>
+                                   <span className="text-xs font-bold">Sao lưu (JSON)</span>
+                               </button>
+                               <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center justify-center p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-100">
+                                   <Upload size={20} className="mb-1"/>
+                                   <span className="text-xs font-bold">Khôi phục (JSON)</span>
+                               </button>
+                               <input 
+                                   type="file" 
+                                   accept=".json" 
+                                   ref={fileInputRef} 
+                                   className="hidden" 
+                                   onChange={handleImportData}
+                               />
+                           </div>
+                           <p className="text-[10px] text-gray-400 mt-2 text-center">Dùng để chuyển dữ liệu sang máy khác.</p>
                       </div>
                   </div>
                   <div className="w-full md:w-2/3">
