@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ClassGroup, Student, Gender } from '../types';
-import { getRandomAvatar, AVATAR_POOL, generateId } from '../services/storage.service';
+import { getRandomAvatar, getUniqueRandomAvatar, AVATAR_POOL, generateId } from '../services/storage.service';
 import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2 } from 'lucide-react';
 
 interface ClassManagerProps {
@@ -46,11 +46,15 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
 
   const addStudent = (name: string, gender: Gender = 'M') => {
     if (!activeClass) return;
+    
+    // Get currently used avatars to avoid duplicates
+    const usedAvatars = activeClass.students.map(s => s.avatar);
+
     const student: Student = {
       id: generateId(),
       name,
       gender,
-      avatar: getRandomAvatar(),
+      avatar: getUniqueRandomAvatar(usedAvatars),
       score: 0,
       tags: [],
       lastPickedDate: null,
@@ -63,6 +67,10 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
   const processImport = () => {
     if (!activeClass) return;
     const lines = importText.split('\n').filter(l => l.trim());
+    
+    // Track used avatars within this import batch and existing class
+    const usedAvatars = new Set<string>(activeClass.students.map(s => s.avatar));
+
     const newStudents: Student[] = lines.map(line => {
       // Simple parsing: Look for (F) or (M), default to M if unknown, remove flags from name
       let gender: Gender = 'M';
@@ -75,11 +83,15 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
       // Clean name
       name = name.replace(/\(.*\)/g, '').trim();
 
+      // Pick unique
+      const avatar = getUniqueRandomAvatar(Array.from(usedAvatars) as string[]);
+      usedAvatars.add(avatar);
+
       return {
         id: generateId(),
         name,
         gender,
-        avatar: getRandomAvatar(),
+        avatar,
         score: 0,
         tags: [],
         lastPickedDate: null,
@@ -143,8 +155,8 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 flex flex-col h-full max-h-[85vh]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 flex-shrink-0">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Users className="text-indigo-600" /> Quản Lý Lớp Học
         </h2>
@@ -168,7 +180,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
       </div>
 
       {/* Add Class */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-shrink-0">
         <input 
           type="text" 
           placeholder="Tên lớp mới..." 
@@ -183,7 +195,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
 
       {activeClass ? (
         <>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 border-b pb-4 items-start sm:items-center">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 border-b pb-4 items-start sm:items-center flex-shrink-0">
                 <button onClick={() => setIsImporting(!isImporting)} className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-md hover:bg-green-100 text-sm font-medium">
                     <FileSpreadsheet size={16} /> Nhập Excel/Dán
                 </button>
@@ -208,7 +220,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
 
             {/* Import Area */}
             {isImporting && (
-                <div className="mb-4 bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300">
+                <div className="mb-4 bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 flex-shrink-0">
                     <h4 className="text-sm font-semibold mb-2 text-gray-600">Dán danh sách tên (Mỗi tên một dòng):</h4>
                     <p className="text-xs text-gray-500 mb-2">Mẹo: Thêm (Nữ) hoặc (F) vào tên để tự động gán giới tính.</p>
                     <textarea 
@@ -221,10 +233,10 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
                 </div>
             )}
 
-            {/* Student List Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2">
+            {/* Student List Grid - ADJUSTED HEIGHT */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto pr-2 flex-grow min-h-0">
                 {activeClass.students.map(student => (
-                    <div key={student.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors group">
+                    <div key={student.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors group h-max">
                         <div className="flex items-center gap-3 overflow-hidden">
                             <span className="text-2xl">{student.avatar}</span>
                             <div className="min-w-0">
@@ -255,7 +267,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
             </div>
 
             {/* Add Single Student Input (Quick Add) */}
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex gap-2 flex-shrink-0">
                 <input 
                     type="text" 
                     id="quickAddName"
