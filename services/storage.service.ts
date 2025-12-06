@@ -1,5 +1,3 @@
-
-
 import { ClassGroup, Settings, Student, Question } from '../types';
 
 const CLASSES_KEY = 'cr_classes';
@@ -10,6 +8,32 @@ const CLOUD_URL_KEY = 'cr_cloud_url'; // NEW KEY
 
 // --- CHANGELOG ---
 export const CHANGELOG = [
+    {
+        version: "1.7",
+        date: "2024-05-26",
+        changes: [
+            "Cập nhật Apps Script V2: Hỗ trợ tách dữ liệu (Chunking) để vượt qua giới hạn 50.000 ký tự của Google Sheets.",
+            "Cho phép lưu trữ dữ liệu lớn bao gồm nhiều hình ảnh và câu hỏi.",
+            "Cập nhật hướng dẫn sử dụng phần Cloud Sync."
+        ]
+    },
+    {
+        version: "1.6.2",
+        date: "2024-05-25",
+        changes: [
+            "Tích hợp component MathRenderer.",
+            "Sửa lỗi hiển thị công thức toán học."
+        ]
+    },
+    {
+        version: "1.6.1",
+        date: "2024-05-25",
+        changes: [
+            "Sửa lỗi Upload Google Sheet (CORS Error): Chuyển phương thức gửi dữ liệu sang text/plain.",
+            "Thêm cảnh báo khi dữ liệu quá lớn (vượt quá giới hạn ô Excel).",
+            "Tối ưu hóa tốc độ đồng bộ đám mây."
+        ]
+    },
     {
         version: "1.6",
         date: "2024-05-24",
@@ -106,9 +130,13 @@ export const syncToCloud = async (scriptUrl: string, fullData: any): Promise<{su
             value: fullData
         };
 
+        // FIX: Use text/plain to avoid CORS preflight (OPTIONS) request which GAS doesn't handle
         const response = await fetch(scriptUrl, {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8",
+            },
         });
         
         const result = await response.json();
@@ -116,10 +144,11 @@ export const syncToCloud = async (scriptUrl: string, fullData: any): Promise<{su
         if (result.result === 'success') {
             return { success: true, message: 'Đã lưu lên Google Sheet thành công!' };
         } else {
-             return { success: false, message: 'Lỗi từ Google Script: ' + JSON.stringify(result) };
+             return { success: false, message: 'Lỗi từ Google Script: ' + (result.message || JSON.stringify(result)) };
         }
     } catch (error: any) {
-        return { success: false, message: 'Lỗi mạng: ' + error.message };
+        console.error("Cloud Sync Error:", error);
+        return { success: false, message: 'Lỗi kết nối: ' + error.message + '. Hãy kiểm tra lại URL hoặc quyền truy cập (Anyone).' };
     }
 };
 
