@@ -27,7 +27,11 @@ export enum PresentationMode {
   SPOTLIGHT = 'SPOTLIGHT',
   GRID_ELIMINATION = 'GRID_ELIMINATION',
   FLIP = 'FLIP',
-  GALAXY = 'GALAXY'
+  GALAXY = 'GALAXY',
+  CLAW_MACHINE = 'CLAW_MACHINE', 
+  LUCKY_CARDS = 'LUCKY_CARDS',
+  DICE = 'DICE',
+  EGG_HATCH = 'EGG_HATCH'
 }
 
 export enum SelectionLogic {
@@ -38,9 +42,24 @@ export enum SelectionLogic {
   ABSOLUTE_RANDOM = 'ABSOLUTE_RANDOM'
 }
 
+// --- NEW QUESTION TYPES ---
+export type QuestionType = 'MCQ' | 'ESSAY';
+
+export interface Question {
+  id: string;
+  content: string;
+  type: QuestionType;
+  options?: string[]; // Only for MCQ
+  correctAnswer?: number; // Index of correct option (0, 1, 2...) for MCQ
+  essayAnswer?: string; // Teacher notes for essay
+  isAnswered?: boolean; // Track if question has been used
+}
+
 export interface Settings {
   maxPoints: number; // Individual standard points
+  minusPoints: number; // Individual penalty points
   groupPoints: number; // Group standard points
+  groupMinusPoints: number; // Group penalty points
   minLuckyPoints: number;
   maxLuckyPoints: number;
   minGroupLuckyPoints: number; // NEW: Group lucky min
