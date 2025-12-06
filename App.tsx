@@ -6,6 +6,7 @@ import ClassManager from './components/ClassManager';
 import QuestionManager from './components/QuestionManager'; 
 import { VisualizationContainer } from './components/Visualizers';
 import { playTick, playWin } from './services/sound';
+import { MathRenderer } from './components/MathRenderer';
 
 // --- Helper Functions ---
 const formatDate = (ts: number | null) => ts ? new Date(ts).toLocaleTimeString() : 'Chưa gọi';
@@ -40,6 +41,7 @@ const HELP_CONTENT = [
             <div className="space-y-2 text-sm text-gray-600">
                 <ul className="list-disc pl-5 space-y-1">
                     <li><b>Thêm thủ công:</b> Chọn loại câu hỏi (Trắc nghiệm/Tự luận) và nhập nội dung.</li>
+                    <li><b>Công thức Toán học:</b> Hỗ trợ nhập công thức bằng cú pháp LaTeX. Ví dụ $$ x^2 $$ cho công thức dòng riêng, hoặc \( x \) cho công thức cùng dòng.</li>
                     <li><b>Nhập nhanh (Copy-Paste):</b> Copy từ Word theo định dạng: "Câu 1: Nội dung... A. Đáp án... Đáp án: A".</li>
                     <li><b>Reset:</b> Nút Reset sẽ đặt lại trạng thái để câu hỏi có thể được hỏi lại.</li>
                 </ul>
@@ -949,7 +951,7 @@ function App() {
                                  {activeQuestion.type === 'MCQ' ? 'Trắc Nghiệm' : 'Tự Luận'}
                              </div>
                              <h2 className="text-2xl md:text-3xl font-black text-gray-800 leading-tight">
-                                 {activeQuestion.content}
+                                 <MathRenderer text={activeQuestion.content} />
                              </h2>
                              {activeQuestion.image && (
                                 <div className="mt-4 flex justify-center">
@@ -979,7 +981,7 @@ function App() {
                                              <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm border border-white/30">
                                                  {String.fromCharCode(65 + idx)}
                                              </span>
-                                             <span>{opt}</span>
+                                             <span><MathRenderer text={opt} /></span>
                                          </button>
                                      )
                                  })}
