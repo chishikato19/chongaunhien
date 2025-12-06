@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database, Maximize, Minimize, Clock, PlayCircle, PauseCircle, RotateCcw, HelpCircle, BookOpen, CheckCircle, XCircle, FileClock, Tag, AlertTriangle, Cloud, CloudUpload, CloudDownload, Link, Save } from 'lucide-react';
+import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database, Maximize, Minimize, Clock, PlayCircle, PauseCircle, RotateCcw, HelpCircle, BookOpen, CheckCircle, XCircle, FileClock, Tag, AlertTriangle, Cloud, CloudUpload, CloudDownload, Link, Save, Copy } from 'lucide-react';
 import * as Storage from './services/storage.service';
 import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings, Question } from './types';
 import ClassManager from './components/ClassManager';
@@ -49,17 +49,78 @@ const HELP_CONTENT = [
         )
     },
     {
-        title: "4. Đồng Bộ Đám Mây (Google Sheets)",
+        title: "4. Đồng Bộ Đám Mây (Google Sheets) V2",
         content: (
             <div className="space-y-2 text-sm text-gray-600">
-                <p><b>Tính năng nâng cao:</b> Lưu trữ dữ liệu trên Google Sheets để dùng chung nhiều máy.</p>
+                <p><b>Lưu ý:</b> Để lưu được nhiều dữ liệu (ảnh, câu hỏi dài) mà không bị lỗi giới hạn 50.000 ký tự, bạn cần sử dụng đoạn mã <b>Apps Script V2</b> dưới đây.</p>
                 <ol className="list-decimal pl-5 space-y-1">
                     <li>Tạo 1 Google Sheet, vào <b>Tiện ích mở rộng &gt; Apps Script</b>.</li>
-                    <li>Copy đoạn code mẫu (liên hệ Admin để lấy) vào script.</li>
-                    <li>Triển khai dưới dạng <b>Web App</b> (Quyền: Anyone).</li>
-                    <li>Copy URL (dạng script.google.com...) dán vào ô "Google Script URL" trong phần Cài đặt dữ liệu.</li>
-                    <li>Nhấn <b>Upload</b> để lưu lên mây hoặc <b>Download</b> để tải về.</li>
+                    <li>Copy toàn bộ đoạn code dưới đây và dán đè vào script cũ.</li>
+                    <li>Nhấn <b>Triển khai (Deploy)</b> &gt; <b>Tùy chọn triển khai mới (New deployment)</b>.</li>
+                    <li>Chọn loại: <b>Web App</b>. Quyền truy cập: <b>Anyone (Bất kỳ ai)</b>.</li>
+                    <li>Copy URL mới và dán vào phần cài đặt của App.</li>
                 </ol>
+                <div className="mt-2 relative bg-gray-900 rounded-lg p-3 border border-gray-700">
+                    <button 
+                        className="absolute top-2 right-2 p-1.5 bg-white/10 hover:bg-white/20 rounded text-white" 
+                        title="Copy Code"
+                        onClick={() => {
+                            navigator.clipboard.writeText(`function doPost(e){var lock=LockService.getScriptLock();lock.tryLock(10000);try{var doc=SpreadsheetApp.getActiveSpreadsheet();var sheet=doc.getSheetByName('DB');if(!sheet){sheet=doc.insertSheet('DB');sheet.appendRow(['Key','Chunk1']);}var rawData=e.postData.contents;var payload=JSON.parse(rawData);var key=payload.key||'data';var value=JSON.stringify(payload.value);var chunks=[];var chunkSize=45000;for(var i=0;i<value.length;i+=chunkSize){chunks.push(value.substring(i,i+chunkSize));}var rows=sheet.getDataRange().getValues();var rowIndex=-1;for(var i=1;i<rows.length;i++){if(rows[i][0]==key){rowIndex=i+1;break;}}if(rowIndex>0){sheet.getRange(rowIndex,1,1,sheet.getLastColumn()).clearContent();sheet.getRange(rowIndex,1).setValue(key);sheet.getRange(rowIndex,2,1,chunks.length).setValues([chunks]);}else{var newRow=[key].concat(chunks);sheet.appendRow(newRow);}return ContentService.createTextOutput(JSON.stringify({"result":"success"})).setMimeType(ContentService.MimeType.JSON);}catch(e){return ContentService.createTextOutput(JSON.stringify({"result":"error","message":e.toString()})).setMimeType(ContentService.MimeType.JSON);}finally{lock.releaseLock();}} function doGet(e){var doc=SpreadsheetApp.getActiveSpreadsheet();var sheet=doc.getSheetByName('DB');var rows=sheet.getDataRange().getValues();var result={};for(var i=1;i<rows.length;i++){var key=rows[i][0];var fullString="";for(var j=1;j<rows[i].length;j++){fullString+=rows[i][j];}try{result[key]=JSON.parse(fullString);}catch(err){result[key]=fullString;}}return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);}`);
+                            alert("Đã copy code! Hãy dán vào Google Apps Script.");
+                        }}
+                    >
+                        <Copy size={16}/>
+                    </button>
+                    <pre className="text-[10px] text-green-400 font-mono overflow-x-auto whitespace-pre-wrap max-h-40">
+{`function doPost(e) {
+  var lock = LockService.getScriptLock(); lock.tryLock(10000);
+  try {
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = doc.getSheetByName('DB');
+    if (!sheet) { sheet = doc.insertSheet('DB'); sheet.appendRow(['Key', 'Chunk1']); }
+    
+    var rawData = e.postData.contents; var payload = JSON.parse(rawData);
+    var key = payload.key || 'data'; var value = JSON.stringify(payload.value);
+    
+    // CHUNKING (TÁCH DỮ LIỆU)
+    var chunks = []; var chunkSize = 45000;
+    for (var i = 0; i < value.length; i += chunkSize) {
+      chunks.push(value.substring(i, i + chunkSize));
+    }
+    
+    var rows = sheet.getDataRange().getValues(); var rowIndex = -1;
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0] == key) { rowIndex = i + 1; break; }
+    }
+    
+    if (rowIndex > 0) {
+       sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).clearContent();
+       sheet.getRange(rowIndex, 1).setValue(key);
+       sheet.getRange(rowIndex, 2, 1, chunks.length).setValues([chunks]);
+    } else {
+       var newRow = [key].concat(chunks);
+       sheet.appendRow(newRow);
+    }
+    return ContentService.createTextOutput(JSON.stringify({"result":"success"})).setMimeType(ContentService.MimeType.JSON);
+  } catch (e) { return ContentService.createTextOutput(JSON.stringify({"result":"error","message":e.toString()})).setMimeType(ContentService.MimeType.JSON); }
+  finally { lock.releaseLock(); }
+}
+
+function doGet(e) {
+  var doc = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = doc.getSheetByName('DB');
+  var rows = sheet.getDataRange().getValues();
+  var result = {};
+  for (var i = 1; i < rows.length; i++) {
+    var key = rows[i][0];
+    var fullString = "";
+    for (var j = 1; j < rows[i].length; j++) { fullString += rows[i][j]; }
+    try { result[key] = JSON.parse(fullString); } catch (err) { result[key] = fullString; }
+  }
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}`}
+                    </pre>
+                </div>
             </div>
         )
     },
