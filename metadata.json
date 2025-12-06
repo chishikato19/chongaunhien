@@ -1,5 +1,5 @@
 {
-  "name": "Chọn ngẫu nhiên",
+  "name": "Chọn ngẫu nhiên V1.4",
   "description": "A feature-rich random student picker with gamification, multiple visualization modes (Wheel, Race, Slots), and fairness tracking. Frontend-only using LocalStorage.",
   "requestFramePermissions": []
 }
