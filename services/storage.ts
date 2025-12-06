@@ -18,7 +18,9 @@ export const getSettings = (): Settings => {
   const data = localStorage.getItem(SETTINGS_KEY);
   const defaultSettings: Settings = { 
     maxPoints: 10, 
+    minusPoints: 5,
     groupPoints: 20, 
+    groupMinusPoints: 10,
     minLuckyPoints: 1,
     maxLuckyPoints: 5,
     minGroupLuckyPoints: 5, // Default group min
