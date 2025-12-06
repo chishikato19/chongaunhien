@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { ClassGroup, Student, Gender } from '../types';
 import { getRandomAvatar, getUniqueRandomAvatar, AVATAR_POOL, generateId } from '../services/storage.service';
-import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2, RotateCcw } from 'lucide-react';
 
 interface ClassManagerProps {
   classes: ClassGroup[];
@@ -39,6 +38,16 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
           onSetActive(updated.length > 0 ? updated[0].id : '');
       }
     }
+  };
+
+  const resetClassScores = () => {
+      if (!activeClass) return;
+      if (window.confirm(`Bạn có chắc muốn đặt lại điểm của toàn bộ học sinh lớp "${activeClass.name}" về 0 không?`)) {
+          const updatedStudents = activeClass.students.map(s => ({ ...s, score: 0 }));
+          const updatedClass = { ...activeClass, students: updatedStudents };
+          onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
+          alert("Đã reset điểm thành công!");
+      }
   };
 
   // --- Student Actions ---
@@ -215,6 +224,9 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
                 </div>
                 <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 text-sm font-medium">
                     <Download size={16} /> Xuất CSV
+                </button>
+                <button onClick={resetClassScores} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-md hover:bg-red-100 text-sm font-medium ml-auto">
+                    <RotateCcw size={16} /> Reset Điểm Lớp
                 </button>
             </div>
 
