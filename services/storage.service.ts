@@ -1,4 +1,5 @@
 
+
 import { ClassGroup, Settings, Student, Question } from '../types';
 
 const CLASSES_KEY = 'cr_classes';
@@ -9,6 +10,15 @@ const CLOUD_URL_KEY = 'cr_cloud_url'; // NEW KEY
 
 // --- CHANGELOG ---
 export const CHANGELOG = [
+    {
+        version: "1.6",
+        date: "2024-05-24",
+        changes: [
+            "Bổ sung hỗ trợ hiển thị công thức Toán học (LaTeX) trong câu hỏi và đáp án.",
+            "Thêm nút 'Reset Điểm Lớp' trong phần Quản lý lớp (chỉ xóa điểm, giữ lại danh sách).",
+            "Cải thiện giao diện nhập liệu câu hỏi và hiển thị công thức."
+        ]
+    },
     {
         version: "1.5",
         date: "2024-05-23",
