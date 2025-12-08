@@ -9,6 +9,16 @@ const CLOUD_URL_KEY = 'cr_cloud_url'; // NEW KEY
 // --- CHANGELOG ---
 export const CHANGELOG = [
     {
+        version: "1.8",
+        date: "2024-05-27",
+        changes: [
+            "Ra mắt tính năng 'Khu vực Lên Bảng' (The Stage).",
+            "Cho phép mời học sinh vào danh sách chờ chấm điểm để gọi tiếp người khác.",
+            "Thanh Dock Bar quản lý học sinh đang làm bài: Chấm Đúng/Sai hoặc Mời về chỗ.",
+            "Logic quay số thông minh: Tự động bỏ qua những học sinh đang đứng trên bảng."
+        ]
+    },
+    {
         version: "1.7",
         date: "2024-05-26",
         changes: [
