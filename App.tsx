@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database, Maximize, Minimize, Clock, PlayCircle, PauseCircle, RotateCcw, HelpCircle, BookOpen, CheckCircle, XCircle, FileClock, Tag, AlertTriangle, Cloud, CloudUpload, CloudDownload, Link, Save, Copy } from 'lucide-react';
+import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database, Maximize, Minimize, Clock, PlayCircle, PauseCircle, RotateCcw, HelpCircle, BookOpen, CheckCircle, XCircle, FileClock, Tag, AlertTriangle, Cloud, CloudUpload, CloudDownload, Link, Save, Copy, Pin, Trash, CornerDownLeft } from 'lucide-react';
 import * as Storage from './services/storage.service';
 import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings, Question } from './types';
 import ClassManager from './components/ClassManager';
@@ -54,9 +54,9 @@ const HELP_CONTENT = [
             <div className="space-y-2 text-sm text-gray-600">
                 <p><b>Lưu ý:</b> Để lưu được nhiều dữ liệu (ảnh, câu hỏi dài) mà không bị lỗi giới hạn 50.000 ký tự, bạn cần sử dụng đoạn mã <b>Apps Script V2</b> dưới đây.</p>
                 <ol className="list-decimal pl-5 space-y-1">
-                    <li>Tạo 1 Google Sheet, vào <b>Tiện ích mở rộng &gt; Apps Script</b>.</li>
+                    <li>Tạo 1 Google Sheet, vào <b>Tiện ích mở rộng > Apps Script</b>.</li>
                     <li>Copy toàn bộ đoạn code dưới đây và dán đè vào script cũ.</li>
-                    <li>Nhấn <b>Triển khai (Deploy)</b> &gt; <b>Tùy chọn triển khai mới (New deployment)</b>.</li>
+                    <li>Nhấn <b>Triển khai (Deploy)</b> > <b>Tùy chọn triển khai mới (New deployment)</b>.</li>
                     <li>Chọn loại: <b>Web App</b>. Quyền truy cập: <b>Anyone (Bất kỳ ai)</b>.</li>
                     <li>Copy URL mới và dán vào phần cài đặt của App.</li>
                 </ol>
@@ -195,6 +195,9 @@ function App() {
   // Cloud Sync State
   const [cloudUrl, setCloudUrl] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // --- STAGE (PENDING LIST) STATE ---
+  const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -335,6 +338,7 @@ function App() {
       }
       setSessionPoints(0);
       setSessionPicks(0);
+      setPendingStudents([]); // Clear stage on new session
       setCurrentView('SESSION');
   };
 
@@ -369,6 +373,9 @@ function App() {
 
     let eligiblePool = [...activeClass.students];
     
+    // EXCLUDE PENDING STUDENTS FROM POOL
+    eligiblePool = eligiblePool.filter(s => !pendingStudents.find(p => p.id === s.id));
+
     if (chosenLogic === SelectionLogic.GROUP_ROTATION && hasGroups) {
         const groups: {[key: string]: Student[]} = {};
         eligiblePool.forEach(s => {
@@ -400,7 +407,14 @@ function App() {
         }
     }
 
-    if (eligiblePool.length === 0) eligiblePool = activeClass.students;
+    if (eligiblePool.length === 0) {
+         // If pool is empty because everyone is pending
+         if (activeClass.students.length > 0 && pendingStudents.length > 0) {
+             showToast("Tất cả học sinh còn lại đang trên bảng! Hãy chấm điểm trước.", 'error');
+             return;
+         }
+         eligiblePool = activeClass.students;
+    }
 
     const pickedWinner = eligiblePool[Math.floor(Math.random() * eligiblePool.length)];
     setWinner(pickedWinner);
@@ -450,14 +464,26 @@ function App() {
     setWinner(null);
     setIsGroupSpin(true);
 
+    // EXCLUDE PENDING GROUPS (If a group is "Pending", it means we picked "Group X" via spinner)
+    // Note: pendingStudents usually contains individual students. If using group mode, we might add a "Group Winner" object to pending.
+    // For simplicity, if we are in group mode, we check if any "GROUP_NAME" id exists in pending.
+    
+    const pendingGroupNames = pendingStudents.filter(s => s.id.startsWith('GROUP_')).map(s => s.name);
+    const availableGroupNames = uniqueGroupNames.filter(g => !pendingGroupNames.includes(g as string));
+    
+    if (availableGroupNames.length === 0) {
+         showToast("Tất cả các nhóm đang trên bảng/chờ chấm!", 'error');
+         return;
+    }
+
     const groupLastPicked: {[key: string]: number} = {};
-    uniqueGroupNames.forEach(gName => {
+    availableGroupNames.forEach(gName => {
         const studentsInGroup = activeClass.students.filter(s => s.group === gName);
         const latestPick = Math.max(...studentsInGroup.map(s => s.lastPickedDate || 0));
         groupLastPicked[gName as string] = latestPick;
     });
 
-    const sortedGroups = uniqueGroupNames.sort((a, b) => groupLastPicked[a as string] - groupLastPicked[b as string]);
+    const sortedGroups = availableGroupNames.sort((a, b) => groupLastPicked[a as string] - groupLastPicked[b as string]);
     let candidateGroupPool = sortedGroups;
     
     if (candidateGroupPool.length > 2) {
@@ -595,6 +621,53 @@ function App() {
     }
   };
 
+  // --- STAGE LOGIC ---
+  const handleAddToStage = () => {
+      if (winner) {
+          // Check duplicates just in case
+          if (!pendingStudents.find(s => s.id === winner.id)) {
+              setPendingStudents(prev => [...prev, winner]);
+              showToast(`Đã thêm ${winner.name} vào danh sách chờ!`, 'success');
+          }
+          setCurrentView('SESSION');
+          setShowResultOverlay(false);
+      }
+  };
+
+  const handleRemoveFromStage = (studentId: string) => {
+      setPendingStudents(prev => prev.filter(s => s.id !== studentId));
+  };
+
+  const handleGradeFromStage = (student: Student, points: number) => {
+      if (!activeClass) return;
+      
+      let updatedStudents: Student[] = [];
+      const isGroupItem = student.id.startsWith('GROUP_');
+
+      if (isGroupItem) {
+           const targetGroup = student.name;
+           updatedStudents = activeClass.students.map(s => 
+               s.group === targetGroup ? { ...s, score: s.score + points } : s
+           );
+           const count = activeClass.students.filter(s => s.group === targetGroup).length;
+           setSessionPoints(prev => prev + (points * count));
+      } else {
+           updatedStudents = activeClass.students.map(s => 
+               s.id === student.id ? { ...s, score: s.score + points } : s
+           );
+           setSessionPoints(prev => prev + points);
+      }
+
+      const updatedClass = { ...activeClass, students: updatedStudents };
+      handleUpdateClasses(classes.map(c => c.id === activeClass.id ? updatedClass : c));
+      
+      if (points > 0) playWin();
+      else playTick();
+
+      // Remove from stage
+      handleRemoveFromStage(student.id);
+  };
+
   const handleOpenQuestion = () => {
       const availableQuestions = questions.filter(q => !q.isAnswered);
       
@@ -699,6 +772,7 @@ function App() {
 
         setSessionPoints(0);
         setSessionPicks(0);
+        setPendingStudents([]); // Clear stage
         showToast("Đã reset điểm số thành công!", 'success');
     }
   };
@@ -793,8 +867,12 @@ function App() {
       const sortedGroups = Object.entries(groupScores).sort((a,b) => b[1] - a[1]);
       const sortedStudents = [...activeClass.students].sort((a, b) => b.score - a.score);
 
+      // STAGE POINTS (For GradeFromStage buttons)
+      const plusPoints = isGroupSpin ? settings.groupPoints : settings.maxPoints;
+      const minusPoints = isGroupSpin ? settings.groupMinusPoints : settings.minusPoints;
+
       return (
-          <div className="max-w-7xl mx-auto p-4 space-y-6 animate-fade-in pb-28">
+          <div className="max-w-7xl mx-auto p-4 space-y-6 animate-fade-in pb-40">
               {/* --- NEW CONTROL PANEL POSITION --- */}
               <div className="bg-white p-4 rounded-xl shadow-lg border border-indigo-100 flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
                    <div className="flex items-center gap-4">
@@ -920,6 +998,40 @@ function App() {
                       </div>
                   </div>
               </div>
+
+              {/* --- PENDING STUDENTS DOCK BAR --- */}
+              {pendingStudents.length > 0 && (
+                  <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-5px_20px_rgba(0,0,0,0.1)] border-t border-indigo-100 p-4 z-40 animate-slide-up">
+                      <div className="max-w-7xl mx-auto">
+                           <div className="flex items-center gap-2 mb-2">
+                               <Pin size={16} className="text-indigo-600" />
+                               <h3 className="text-xs font-bold uppercase text-gray-500">Danh sách đang làm bài / Chờ chấm</h3>
+                           </div>
+                           <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+                               {pendingStudents.map(student => (
+                                   <div key={student.id} className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex items-center gap-3 min-w-[250px] shadow-sm">
+                                       <div className="text-3xl">{student.avatar}</div>
+                                       <div className="flex-grow min-w-0">
+                                           <div className="font-bold text-gray-800 truncate">{student.name}</div>
+                                           <div className="text-xs text-gray-500">{student.group || 'Cá nhân'}</div>
+                                       </div>
+                                       <div className="flex gap-1">
+                                           <button onClick={() => handleGradeFromStage(student, plusPoints)} className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 shadow-sm" title="Đúng (+Điểm)">
+                                               <CheckCircle size={16} />
+                                           </button>
+                                           <button onClick={() => handleGradeFromStage(student, -minusPoints)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-sm" title="Sai (-Điểm)">
+                                               <XCircle size={16} />
+                                           </button>
+                                           <button onClick={() => handleRemoveFromStage(student.id)} className="p-2 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300" title="Về chỗ (Hủy)">
+                                               <CornerDownLeft size={16} />
+                                           </button>
+                                       </div>
+                                   </div>
+                               ))}
+                           </div>
+                      </div>
+                  </div>
+              )}
           </div>
       );
   };
@@ -989,9 +1101,15 @@ function App() {
                                     <span className="text-xl">-{minusPoints}</span>
                                     <span className="text-[10px] uppercase opacity-70">Phạt trực tiếp</span>
                                 </button>
-                                <button onClick={handleLuckyPointClick} className="col-span-2 py-4 bg-yellow-50 text-yellow-700 font-bold rounded-xl border border-yellow-200 hover:bg-yellow-100 transition-colors flex flex-col items-center justify-center">
+                                <button onClick={handleLuckyPointClick} className="py-4 bg-yellow-50 text-yellow-700 font-bold rounded-xl border border-yellow-200 hover:bg-yellow-100 transition-colors flex flex-col items-center justify-center">
                                     <span className="text-xl">🎲 +{getLuckyRangeText()}</span>
                                     <span className="text-[10px] uppercase opacity-70">May mắn</span>
+                                </button>
+
+                                {/* STAGE BUTTON */}
+                                <button onClick={handleAddToStage} className="py-4 bg-indigo-50 text-indigo-700 font-bold rounded-xl border border-indigo-200 hover:bg-indigo-100 transition-colors flex flex-col items-center justify-center">
+                                    <Pin size={24} />
+                                    <span className="text-[10px] uppercase opacity-70 mt-1">Mời lên bảng</span>
                                 </button>
                             </div>
                              <button onClick={() => setCurrentView('SESSION')} className="w-full py-3 text-gray-400 hover:text-gray-600 text-sm font-medium mt-2">
@@ -1415,6 +1533,7 @@ function App() {
                   <div className="flex items-center gap-2">
                       <div className="bg-indigo-600 text-white p-1.5 rounded-lg"><Play size={20} fill="currentColor"/></div>
                       <span className="font-bold text-lg tracking-tight text-gray-800">ClassRandomizer</span>
+                      <button onClick={() => setShowChangelog(true)} className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-black border border-indigo-200 hover:bg-indigo-200">v1.8</button>
                   </div>
                   
                   <div className="flex items-center gap-1 md:gap-2">
@@ -1427,17 +1546,19 @@ function App() {
                       <button onClick={() => setShowHelp(true)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg hover:text-indigo-600 transition-colors" title="Hướng dẫn">
                           <BookOpen size={20} />
                       </button>
-                      <button onClick={() => setShowChangelog(true)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg hover:text-indigo-600 transition-colors" title="Cập nhật">
-                          <Tag size={20} />
-                      </button>
                       <button onClick={() => setShowSettings(true)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg hover:text-indigo-600 transition-colors" title="Cài đặt">
                           <SettingsIcon size={20} />
                       </button>
                       
                       {currentView === 'SESSION' && (
-                          <button onClick={triggerEndSession} className="ml-2 flex items-center gap-1 bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-bold text-xs md:text-sm border border-red-100 transition-colors">
-                              <LogOut size={16} /> <span className="hidden sm:inline">Kết thúc</span>
-                          </button>
+                          <div className="flex gap-1 ml-2">
+                            <button onClick={resetData} className="flex items-center gap-1 bg-white text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100 hover:text-red-500 font-bold text-xs md:text-sm border border-gray-200 transition-colors" title="Reset điểm">
+                                <RotateCcw size={16} />
+                            </button>
+                            <button onClick={triggerEndSession} className="flex items-center gap-1 bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-bold text-xs md:text-sm border border-red-100 transition-colors">
+                                <LogOut size={16} /> <span className="hidden sm:inline">Kết thúc</span>
+                            </button>
+                          </div>
                       )}
                   </div>
               </div>
