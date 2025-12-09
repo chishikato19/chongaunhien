@@ -1,5 +1,4 @@
-
-import { ClassGroup, Settings } from '../types';
+import { ClassGroup, Settings, PresentationMode } from '../types';
 
 const CLASSES_KEY = 'cr_classes';
 const SETTINGS_KEY = 'cr_settings';
@@ -29,7 +28,33 @@ export const getSettings = (): Settings => {
     raceDuration: 10, 
     themeColor: 'indigo', 
     allowRepeats: false,
-    soundEnabled: true
+    soundEnabled: true,
+    gameUnlockThresholds: {
+        [PresentationMode.WHEEL]: 100,
+        [PresentationMode.SLOT]: 200,
+        [PresentationMode.RACE]: 300,
+        [PresentationMode.BOX]: 400,
+        [PresentationMode.FLIP]: 500,
+        [PresentationMode.SPOTLIGHT]: 600,
+        [PresentationMode.GRID_ELIMINATION]: 700,
+        [PresentationMode.DICE]: 800,
+        [PresentationMode.LUCKY_CARDS]: 900,
+        [PresentationMode.CLAW_MACHINE]: 1000,
+        [PresentationMode.GALAXY]: 1500,
+        [PresentationMode.EGG_HATCH]: 2000,
+    },
+    achievementThresholds: {
+        'HIGH_SCORE_20': 20,
+        'HIGH_SCORE_50': 50,
+        'HIGH_SCORE_100': 100,
+        'HIGH_SCORE_200': 200,
+        'HIGH_SCORE_500': 500,
+    },
+    congratulationTemplate: "Chúc mừng {name} đã đạt danh hiệu {badge}!",
+    commonAvatars: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🦓', '🦍', '🦧', '🦣', '🐘', '👱', '🟠'],
+    specialAvatars: ['🦄', '🐉', '🥋', '👾', '👽', '👻', '🤖', '💩', '🤡', '👹', '👺', '🧙', '🧙‍♀️', '🧚', '🧚‍♀️', '🧛', '🧛‍♀️', '🧜', '🧜‍♀️', '🧝', '🧝‍♀️', '🧞', '🧞‍♀️', '🧟', '🧟‍♀️', '🧠', '🦾', '🦿', '👁️', '🦸', '🦹', '👮', '👮‍♀️', '👷', '👷‍♀️', '💂', '💂‍♀️', '🕵️', '🕵️‍♀️', '👩‍⚕️', '👨‍⚕️', '👩‍🚀', '👨‍🚀', '👩‍⚖️', '👨‍⚖️', '👰', '🤵', '👸', '🤴', '🥷', '🎅', '🤶', '👯', '💃', '🕺', '🕴️', '🧘', '🔥', '⚡', '🌈', '☁️'],
+    avatarPrice: 10,
+    warningSeconds: 10
   };
 
   // Merge saved settings with defaults to handle missing keys in updates
