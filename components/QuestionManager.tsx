@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
-import { Question, QuestionType } from '../types';
+import { Question, QuestionType, Difficulty } from '../types';
 import { generateId } from '../services/storage.service';
-import { Plus, Trash2, HelpCircle, AlertCircle, Save, RefreshCcw, Edit, X, Calculator } from 'lucide-react';
+import { Plus, Trash2, HelpCircle, AlertCircle, Save, RefreshCcw, Edit, X, Calculator, GripVertical, Shuffle, BarChart } from 'lucide-react';
 import { MathRenderer } from './MathRenderer';
 
 interface QuestionManagerProps {
     questions: Question[];
     onUpdateQuestions: (questions: Question[]) => void;
 }
+
+const DIFFICULTY_COLORS: {[key in Difficulty]: string} = {
+    'EASY': 'bg-green-100 text-green-700',
+    'MEDIUM': 'bg-yellow-100 text-yellow-700',
+    'HARD': 'bg-red-100 text-red-700'
+};
+
+const DIFFICULTY_LABELS: {[key in Difficulty]: string} = {
+    'EASY': 'Dễ',
+    'MEDIUM': 'TB',
+    'HARD': 'Khó'
+};
 
 const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQuestions }) => {
     const [activeTab, setActiveTab] = useState<'LIST' | 'IMPORT'>('LIST');
@@ -18,8 +30,13 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
     const [editingId, setEditingId] = useState<string | null>(null);
     const [newQuestionContent, setNewQuestionContent] = useState('');
     const [newQuestionType, setNewQuestionType] = useState<QuestionType>('ESSAY');
+    const [newQuestionDiff, setNewQuestionDiff] = useState<Difficulty>('MEDIUM');
     const [mcqOptions, setMcqOptions] = useState<string[]>(['', '', '', '']); // A, B, C, D
     const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number>(0);
+    // Sequence State
+    const [sequenceSteps, setSequenceSteps] = useState<string[]>(['', '', '']);
+    // Matching State
+    const [matchingPairs, setMatchingPairs] = useState<{left: string, right: string}[]>([{left: '', right: ''}, {left: '', right: ''}]);
 
     // --- Actions ---
     const deleteQuestion = (id: string) => {
@@ -41,14 +58,18 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
         setEditingId(q.id);
         setNewQuestionContent(q.content);
         setNewQuestionType(q.type);
+        setNewQuestionDiff(q.difficulty || 'MEDIUM');
         if (q.type === 'MCQ') {
             setMcqOptions(q.options || ['', '', '', '']);
             setCorrectAnswerIndex(q.correctAnswer || 0);
+        } else if (q.type === 'SEQUENCE') {
+            setSequenceSteps(q.options || ['', '', '']);
+        } else if (q.type === 'MATCHING') {
+            setMatchingPairs(q.pairs || [{left: '', right: ''}, {left: '', right: ''}]);
         } else {
              setMcqOptions(['', '', '', '']);
              setCorrectAnswerIndex(0);
         }
-        // Ensure we are on the list tab to see the form
         setActiveTab('LIST');
     };
 
@@ -56,7 +77,10 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
         setEditingId(null);
         setNewQuestionContent('');
         setNewQuestionType('ESSAY');
+        setNewQuestionDiff('MEDIUM');
         setMcqOptions(['', '', '', '']);
+        setSequenceSteps(['', '', '']);
+        setMatchingPairs([{left: '', right: ''}, {left: '', right: ''}]);
         setCorrectAnswerIndex(0);
     };
 
@@ -74,17 +98,41 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
             }
         }
 
+        if (newQuestionType === 'SEQUENCE') {
+            const filteredSteps = sequenceSteps.filter(s => s.trim() !== '');
+            if (filteredSteps.length < 2) {
+                alert("Câu hỏi sắp xếp cần ít nhất 2 bước!");
+                return;
+            }
+        }
+
+        if (newQuestionType === 'MATCHING') {
+             const filteredPairs = matchingPairs.filter(p => p.left.trim() !== '' && p.right.trim() !== '');
+             if (filteredPairs.length < 2) {
+                 alert("Câu hỏi ghép nối cần ít nhất 2 cặp!");
+                 return;
+             }
+        }
+
         if (editingId) {
             // Update existing
             const updatedQuestions = questions.map(q => {
                 if (q.id === editingId) {
-                    return {
+                    const updatedQ: Question = {
                         ...q,
                         content: newQuestionContent,
                         type: newQuestionType,
-                        options: newQuestionType === 'MCQ' ? mcqOptions : undefined,
-                        correctAnswer: newQuestionType === 'MCQ' ? correctAnswerIndex : undefined
+                        difficulty: newQuestionDiff
                     };
+                    if (newQuestionType === 'MCQ') {
+                         updatedQ.options = mcqOptions;
+                         updatedQ.correctAnswer = correctAnswerIndex;
+                    } else if (newQuestionType === 'SEQUENCE') {
+                         updatedQ.options = sequenceSteps.filter(s => s.trim() !== '');
+                    } else if (newQuestionType === 'MATCHING') {
+                        updatedQ.pairs = matchingPairs.filter(p => p.left.trim() !== '' || p.right.trim() !== '');
+                    }
+                    return updatedQ;
                 }
                 return q;
             });
@@ -96,12 +144,17 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                 id: generateId(),
                 content: newQuestionContent,
                 type: newQuestionType,
+                difficulty: newQuestionDiff,
                 isAnswered: false
             };
 
             if (newQuestionType === 'MCQ') {
                 newQ.options = mcqOptions;
                 newQ.correctAnswer = correctAnswerIndex;
+            } else if (newQuestionType === 'SEQUENCE') {
+                newQ.options = sequenceSteps.filter(s => s.trim() !== '');
+            } else if (newQuestionType === 'MATCHING') {
+                newQ.pairs = matchingPairs.filter(p => p.left.trim() !== '' || p.right.trim() !== '');
             }
 
             onUpdateQuestions([...questions, newQ]);
@@ -109,6 +162,8 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
             // Reset Form
             setNewQuestionContent('');
             setMcqOptions(['', '', '', '']);
+            setSequenceSteps(['', '', '']);
+            setMatchingPairs([{left: '', right: ''}, {left: '', right: ''}]);
             setCorrectAnswerIndex(0);
         }
     };
@@ -117,6 +172,33 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
         const newOpts = [...mcqOptions];
         newOpts[index] = value;
         setMcqOptions(newOpts);
+    };
+
+    const updateSequenceStep = (index: number, value: string) => {
+        const newSteps = [...sequenceSteps];
+        newSteps[index] = value;
+        setSequenceSteps(newSteps);
+    };
+
+    const addSequenceStep = () => {
+        setSequenceSteps([...sequenceSteps, '']);
+    };
+
+    const removeSequenceStep = (index: number) => {
+        if (sequenceSteps.length <= 2) return;
+        setSequenceSteps(sequenceSteps.filter((_, i) => i !== index));
+    };
+
+    // Matching Helpers
+    const updatePair = (index: number, field: 'left' | 'right', value: string) => {
+        const newPairs = [...matchingPairs];
+        newPairs[index][field] = value;
+        setMatchingPairs(newPairs);
+    };
+    const addPair = () => setMatchingPairs([...matchingPairs, {left: '', right: ''}]);
+    const removePair = (index: number) => {
+        if (matchingPairs.length <= 2) return;
+        setMatchingPairs(matchingPairs.filter((_, i) => i !== index));
     };
 
     const addToLog = (msg: string) => setDebugLog(prev => [...prev, msg]);
@@ -129,76 +211,91 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
         const parsedQuestions: Question[] = [];
         let currentQ: Partial<Question> | null = null;
         let currentOptions: string[] = [];
+        let currentSequenceSteps: string[] = []; 
+        let currentPairs: {left: string, right: string}[] = [];
 
-        // Regex helpers
-        const questionStartRegex = /^(Câu|Bài)\s*\d+[:.]?|(Question)\s*\d+[:.]?|^\d+\.\s/i;
+        const questionStartRegex = /^(Câu|Bài|Question)\s*\d+[:.]?/i;
         const optionRegex = /^([A-D])\./i;
         const answerRegex = /^(Đáp án|Answer|Result)[:\s]*([A-D])/i;
+        const sequenceStepRegex = /^(\d+\.|-)\s+(.*)/;
 
-        lines.forEach((line, idx) => {
-            addToLog(`Line ${idx + 1}: "${line}"`);
-
-            // 1. Detect New Question
-            if (questionStartRegex.test(line) || (!currentQ && !optionRegex.test(line) && !answerRegex.test(line))) {
-                // Save previous if exists
-                if (currentQ) {
-                    if (currentOptions.length > 0) {
-                        currentQ.type = 'MCQ';
-                        currentQ.options = [...currentOptions];
-                    } else {
-                        currentQ.type = 'ESSAY';
-                    }
-                    if(currentQ.content) {
-                        currentQ.isAnswered = false;
-                        parsedQuestions.push(currentQ as Question);
-                        addToLog(`-> Saved previous question: ${currentQ.content?.substring(0, 20)}...`);
-                    }
+        const saveCurrent = () => {
+             if (currentQ) {
+                if (currentOptions.length > 0) {
+                    currentQ.type = 'MCQ';
+                    currentQ.options = [...currentOptions];
+                } else if (currentPairs.length > 0) {
+                    currentQ.type = 'MATCHING';
+                    currentQ.pairs = [...currentPairs];
+                } else if (currentSequenceSteps.length > 0) {
+                    currentQ.type = 'SEQUENCE';
+                    currentQ.options = [...currentSequenceSteps];
+                } else {
+                    currentQ.type = 'ESSAY';
                 }
 
-                // Start new
-                let content = line.replace(questionStartRegex, '').trim();
-                if (!questionStartRegex.test(line)) content = line;
+                if(currentQ.content) {
+                    currentQ.isAnswered = false;
+                    parsedQuestions.push(currentQ as Question);
+                    addToLog(`-> Saved: ${currentQ.type} [${currentQ.difficulty}]`);
+                }
+            }
+        };
+
+        lines.forEach((line, idx) => {
+            if (questionStartRegex.test(line)) {
+                saveCurrent();
+
+                let diff: Difficulty = 'MEDIUM';
+                if (line.includes('[Khó]')) diff = 'HARD';
+                else if (line.includes('[Dễ]')) diff = 'EASY';
+                
+                let content = line.replace(questionStartRegex, '').replace(/\[.*\]/g, '').trim();
+                if (!content) content = line;
 
                 currentQ = {
                     id: generateId(),
                     content: content,
-                    type: 'ESSAY', // Default
-                    options: []
+                    type: 'ESSAY',
+                    difficulty: diff
                 };
                 currentOptions = [];
-                addToLog(`-> New Question detected`);
+                currentPairs = [];
+                currentSequenceSteps = [];
+                addToLog(`-> New Question detected (Line ${idx+1})`);
             } 
-            // 2. Detect Options (A. B. C. D.)
+            else if (currentQ && line.includes('|')) {
+                const parts = line.split('|');
+                if (parts.length >= 2) {
+                    const left = parts[0].trim();
+                    const right = parts.slice(1).join('|').trim();
+                    currentPairs.push({left, right});
+                    addToLog(`-> Found Pair: ${left} <-> ${right}`);
+                }
+            }
             else if (currentQ && optionRegex.test(line)) {
                 const optContent = line.replace(optionRegex, '').trim();
                 currentOptions.push(optContent);
-                addToLog(`-> Found Option: ${optContent}`);
             }
-            // 3. Detect Answer
             else if (currentQ && answerRegex.test(line)) {
                 const match = line.match(answerRegex);
                 if (match && match[2]) {
-                    const charCode = match[2].toUpperCase().charCodeAt(0) - 65; // A=0, B=1
+                    const charCode = match[2].toUpperCase().charCodeAt(0) - 65; 
                     currentQ.correctAnswer = charCode;
-                    addToLog(`-> Found Answer Index: ${charCode} (${match[2]})`);
                 }
             }
-            // 4. Append to content if it's a continuation
-            else if (currentQ && currentOptions.length === 0) {
+            else if (currentQ && sequenceStepRegex.test(line) && currentOptions.length === 0 && currentPairs.length === 0) {
+                 const match = line.match(sequenceStepRegex);
+                 if (match && match[2]) {
+                     currentSequenceSteps.push(match[2].trim());
+                 }
+            }
+            else if (currentQ && currentOptions.length === 0 && currentPairs.length === 0 && currentSequenceSteps.length === 0) {
                  currentQ.content += " " + line;
             }
         });
 
-        // Save last one
-        if (currentQ) {
-            if (currentOptions.length > 0) {
-                currentQ.type = 'MCQ';
-                currentQ.options = [...currentOptions];
-            }
-             currentQ.isAnswered = false;
-             parsedQuestions.push(currentQ as Question);
-             addToLog(`-> Saved last question.`);
-        }
+        saveCurrent();
 
         addToLog(`--- KẾT THÚC: Tìm thấy ${parsedQuestions.length} câu hỏi ---`);
         if (parsedQuestions.length > 0) {
@@ -240,7 +337,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                              <h3 className="text-xs font-bold uppercase text-gray-500 flex items-center gap-2">
                                  {editingId ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới'}
                                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1 rounded normal-case font-normal flex items-center gap-1">
-                                    <Calculator size={10} /> Hỗ trợ LaTeX: $$...$$
+                                    <Calculator size={10} /> Hỗ trợ LaTeX
                                  </span>
                              </h3>
                              {editingId && (
@@ -257,12 +354,25 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                             >
                                 <option value="ESSAY">Tự luận</option>
                                 <option value="MCQ">Trắc nghiệm</option>
+                                <option value="SEQUENCE">Sắp xếp</option>
+                                <option value="MATCHING">Ghép nối</option>
                             </select>
+                            
+                            <select 
+                                value={newQuestionDiff} 
+                                onChange={(e) => setNewQuestionDiff(e.target.value as Difficulty)}
+                                className={`border rounded-lg px-3 py-2 text-sm font-bold shadow-sm ${newQuestionDiff === 'HARD' ? 'bg-red-50 text-red-700' : newQuestionDiff === 'MEDIUM' ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'}`}
+                            >
+                                <option value="EASY">Dễ</option>
+                                <option value="MEDIUM">TB</option>
+                                <option value="HARD">Khó</option>
+                            </select>
+
                             <div className="flex-grow flex flex-col">
                                 <input 
                                     value={newQuestionContent}
                                     onChange={(e) => setNewQuestionContent(e.target.value)}
-                                    placeholder="Nhập nội dung câu hỏi (VD: Tính $$ \sqrt{25} $$)..."
+                                    placeholder="Nhập nội dung câu hỏi..."
                                     className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-500 outline-none shadow-sm"
                                 />
                                 {newQuestionContent.includes('$') && (
@@ -295,13 +405,70 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                                                 onChange={(e) => updateMcqOption(idx, e.target.value)}
                                             />
                                          </div>
-                                         {mcqOptions[idx].includes('$') && (
-                                             <div className="ml-8 text-xs text-gray-600">
-                                                 <MathRenderer text={mcqOptions[idx]} />
-                                             </div>
-                                         )}
                                      </div>
                                  ))}
+                             </div>
+                         )}
+                         
+                         {/* Sequence Steps */}
+                         {newQuestionType === 'SEQUENCE' && (
+                             <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                 <div className="text-xs text-gray-500 font-bold mb-2 uppercase">Nhập các bước theo THỨ TỰ ĐÚNG:</div>
+                                 <div className="space-y-2">
+                                     {sequenceSteps.map((step, idx) => (
+                                         <div key={idx} className="flex items-center gap-2">
+                                             <span className="text-gray-400 font-bold w-6 text-right">{idx + 1}.</span>
+                                             <input 
+                                                 className="flex-grow border rounded px-2 py-1 text-sm focus:border-pink-500 outline-none"
+                                                 placeholder={`Bước ${idx + 1}...`}
+                                                 value={step}
+                                                 onChange={(e) => updateSequenceStep(idx, e.target.value)}
+                                             />
+                                             <button onClick={() => removeSequenceStep(idx)} className="text-red-400 hover:text-red-600 p-1" disabled={sequenceSteps.length <= 2}>
+                                                 <Trash2 size={16}/>
+                                             </button>
+                                         </div>
+                                     ))}
+                                     <button onClick={addSequenceStep} className="ml-8 text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 mt-1">
+                                         <Plus size={12}/> Thêm bước
+                                     </button>
+                                 </div>
+                             </div>
+                         )}
+
+                         {/* Matching Pairs */}
+                         {newQuestionType === 'MATCHING' && (
+                             <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                 <div className="text-xs text-gray-500 font-bold mb-2 uppercase">Nhập các cặp tương ứng:</div>
+                                 <div className="space-y-2">
+                                     {matchingPairs.map((pair, idx) => (
+                                         <div key={idx} className="flex items-center gap-2">
+                                             <div className="flex-1 flex flex-col">
+                                                 <input 
+                                                     className="w-full border rounded px-2 py-1 text-sm focus:border-pink-500 outline-none"
+                                                     placeholder={`Vế trái ${idx + 1}`}
+                                                     value={pair.left}
+                                                     onChange={(e) => updatePair(idx, 'left', e.target.value)}
+                                                 />
+                                             </div>
+                                             <div className="text-gray-400 font-bold">↔</div>
+                                             <div className="flex-1 flex flex-col">
+                                                 <input 
+                                                     className="w-full border rounded px-2 py-1 text-sm focus:border-pink-500 outline-none"
+                                                     placeholder={`Vế phải ${idx + 1}`}
+                                                     value={pair.right}
+                                                     onChange={(e) => updatePair(idx, 'right', e.target.value)}
+                                                 />
+                                             </div>
+                                             <button onClick={() => removePair(idx)} className="text-red-400 hover:text-red-600 p-1" disabled={matchingPairs.length <= 2}>
+                                                 <Trash2 size={16}/>
+                                             </button>
+                                         </div>
+                                     ))}
+                                     <button onClick={addPair} className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 mt-1">
+                                         <Plus size={12}/> Thêm cặp
+                                     </button>
+                                 </div>
                              </div>
                          )}
 
@@ -311,15 +478,6 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                             </button>
                          </div>
                     </div>
-
-                    {/* Reset Button */}
-                    {questions.length > 0 && (
-                        <div className="flex justify-end mb-2">
-                            <button onClick={resetQuestionStatus} className="text-xs flex items-center gap-1 text-gray-500 hover:text-indigo-600">
-                                <RefreshCcw size={12}/> Reset trạng thái "Đã trả lời"
-                            </button>
-                        </div>
-                    )}
 
                     <div className="flex-grow overflow-y-auto space-y-3 pr-2 custom-scrollbar">
                         {questions.length === 0 ? (
@@ -331,8 +489,11 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                                         <div className="flex-grow">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="bg-gray-200 text-gray-700 text-[10px] px-2 py-0.5 rounded font-bold">#{idx+1}</span>
-                                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white ${q.type === 'MCQ' ? 'bg-blue-500' : 'bg-orange-500'}`}>
-                                                    {q.type === 'MCQ' ? 'Trắc nghiệm' : 'Tự luận'}
+                                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white ${q.type === 'MCQ' ? 'bg-blue-500' : q.type === 'SEQUENCE' ? 'bg-purple-500' : q.type === 'MATCHING' ? 'bg-indigo-500' : 'bg-orange-500'}`}>
+                                                    {q.type === 'MCQ' ? 'Trắc nghiệm' : q.type === 'SEQUENCE' ? 'Sắp xếp' : q.type === 'MATCHING' ? 'Ghép nối' : 'Tự luận'}
+                                                </span>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${DIFFICULTY_COLORS[q.difficulty || 'MEDIUM']}`}>
+                                                    {DIFFICULTY_LABELS[q.difficulty || 'MEDIUM']}
                                                 </span>
                                                 {q.isAnswered && (
                                                     <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-green-100 text-green-700 border border-green-200">
@@ -343,15 +504,6 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                                             <div className={`font-medium ${q.isAnswered ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
                                                 <MathRenderer text={q.content} />
                                             </div>
-                                            {q.type === 'MCQ' && q.options && (
-                                                <div className="mt-2 grid grid-cols-2 gap-2">
-                                                    {q.options.map((opt, i) => (
-                                                        <div key={i} className={`text-xs p-1.5 rounded border ${i === q.correctAnswer ? 'bg-green-50 border-green-300 text-green-800 font-bold' : 'bg-white border-gray-200 text-gray-500'}`}>
-                                                            {String.fromCharCode(65+i)}. <MathRenderer text={opt} />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             <button onClick={() => startEditing(q)} className="text-gray-400 hover:text-blue-500 p-2 hover:bg-blue-50 rounded" title="Sửa">
@@ -373,13 +525,13 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                 <div className="flex flex-col h-full gap-4">
                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
                         <h4 className="font-bold flex items-center gap-2 mb-2"><AlertCircle size={16}/> Hướng dẫn nhập nhanh</h4>
-                        <ul className="list-disc pl-5 space-y-1 text-xs">
-                            <li>Copy câu hỏi từ Word hoặc file Text dán vào ô bên dưới.</li>
-                            <li>Định dạng nhận diện: <b>Câu 1: Nội dung...</b> hoặc mỗi dòng một câu hỏi.</li>
-                            <li>Trắc nghiệm: Các dòng tiếp theo bắt đầu bằng <b>A.</b>, <b>B.</b>, <b>C.</b>...</li>
-                            <li>Đáp án đúng: Thêm dòng <b>Đáp án: A</b> hoặc <b>Answer: B</b> ở cuối mỗi câu.</li>
-                            <li><b>Toán học:</b> Dùng cặp dấu $$ để nhập công thức. VD: $$ \frac&#123;1&#125;&#123;2&#125; $$</li>
-                        </ul>
+                        <p className="text-xs mb-2">Thêm [Khó], [TB], [Dễ] vào dòng đầu để set độ khó.</p>
+                        <pre className="bg-white p-2 rounded border text-[10px] mb-2 font-mono">
+                            Câu 1 [Khó]: 1 + 1 bằng mấy?{"\n"}
+                            A. 1{"\n"}
+                            B. 2{"\n"}
+                            Đáp án: B
+                        </pre>
                      </div>
 
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow min-h-0">
@@ -387,21 +539,17 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                              <label className="text-xs font-bold text-gray-500 mb-1">Dán nội dung vào đây:</label>
                              <textarea 
                                 className="flex-grow w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-pink-500 outline-none resize-none font-mono"
-                                placeholder={`Câu 1: Tính diện tích hình tròn bán kính r?\nA. $$ S = \pi r^2 $$\nB. $$ S = 2\pi r $$\nĐáp án: A`}
+                                placeholder={`Câu 1 [TB]: Nội dung...`}
                                 value={importText}
                                 onChange={e => setImportText(e.target.value)}
-                             ></textarea>
+                            ></textarea>
                          </div>
                          <div className="flex flex-col bg-gray-900 rounded-lg p-3 overflow-hidden">
                              <div className="flex justify-between items-center mb-1">
-                                 <label className="text-xs font-bold text-gray-400">Debug Log (Nhật ký xử lý):</label>
-                                 <span className="text-[10px] text-gray-600">Kiểm tra lỗi tại đây</span>
+                                 <label className="text-xs font-bold text-gray-400">Debug Log:</label>
                              </div>
                              <div className="flex-grow overflow-y-auto font-mono text-xs text-green-400 space-y-1 custom-scrollbar">
-                                 {debugLog.length === 0 && <span className="opacity-50 italic">Chưa có dữ liệu xử lý...</span>}
-                                 {debugLog.map((log, i) => (
-                                     <div key={i} className="border-b border-gray-800 pb-0.5">{log}</div>
-                                 ))}
+                                 {debugLog.map((log, i) => <div key={i} className="border-b border-gray-800 pb-0.5">{log}</div>)}
                              </div>
                          </div>
                      </div>
