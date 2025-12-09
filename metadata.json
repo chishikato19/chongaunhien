@@ -1,5 +1,7 @@
 {
-  "name": "Chọn ngẫu nhiên V1.9",
-  "description": "A feature-rich random student picker with gamification, multiple visualization modes (Wheel, Race, Slots), and fairness tracking. Frontend-only using LocalStorage.",
-  "requestFramePermissions": []
+  "name": "ClassRandomizer V2.3 (Academic Logic)",
+  "description": "Updates include Academic Levels, Question Difficulty, Smart Weighted Randomizer, Tiered Shop Prices.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

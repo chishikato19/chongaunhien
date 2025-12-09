@@ -1,21 +1,35 @@
 
+
 export type Gender = 'M' | 'F';
+
+// NEW: Academic Level
+export type AcademicLevel = 'GOOD' | 'FAIR' | 'PASS' | 'FAIL'; 
+// Tốt | Khá | Đạt | Chưa đạt
 
 export interface Student {
   id: string;
   name: string;
   gender: Gender;
-  avatar: string; // Emoji char
-  score: number;
-  tags: string[]; // e.g., 'absent', 'answered'
-  lastPickedDate: number | null; // Timestamp
-  group?: string; // Group name (e.g., "Group 1")
+  avatar: string; 
+  score: number; 
+  cumulativeScore?: number; 
+  balance?: number; 
+  unlockedAvatars?: string[]; 
+  tags: string[]; 
+  lastPickedDate: number | null; 
+  group?: string; 
+  achievements?: string[]; 
+  isAbsent?: boolean; 
+  // NEW
+  academicLevel?: AcademicLevel;
 }
 
 export interface ClassGroup {
   id: string;
   name: string;
   students: Student[];
+  // NEW: Track recent picks to avoid repetition
+  recentPickHistory?: string[]; 
 }
 
 export interface Video {
@@ -43,38 +57,60 @@ export enum PresentationMode {
 
 export enum SelectionLogic {
   RANDOM_INDIVIDUAL = 'RANDOM_INDIVIDUAL',
-  GROUP_ROTATION = 'GROUP_ROTATION', // Simulated by picking least picked
+  GROUP_ROTATION = 'GROUP_ROTATION', 
   TAG_FILTER = 'TAG_FILTER',
   GENDER_ROTATION = 'GENDER_ROTATION',
   ABSOLUTE_RANDOM = 'ABSOLUTE_RANDOM'
 }
 
-// --- NEW QUESTION TYPES ---
-export type QuestionType = 'MCQ' | 'ESSAY';
+export type QuestionType = 'MCQ' | 'ESSAY' | 'SEQUENCE' | 'MATCHING';
+// NEW: Difficulty
+export type Difficulty = 'HARD' | 'MEDIUM' | 'EASY';
 
 export interface Question {
   id: string;
   content: string;
   type: QuestionType;
-  options?: string[]; // Only for MCQ
-  correctAnswer?: number; // Index of correct option (0, 1, 2...) for MCQ
-  essayAnswer?: string; // Teacher notes for essay
-  isAnswered?: boolean; // Track if question has been used
-  image?: string; // Base64 or URL
+  options?: string[]; 
+  pairs?: {left: string, right: string}[]; 
+  correctAnswer?: number; 
+  essayAnswer?: string; 
+  isAnswered?: boolean; 
+  image?: string; 
+  // NEW
+  difficulty?: Difficulty;
 }
 
 export interface Settings {
-  maxPoints: number; // Individual standard points
-  minusPoints: number; // Individual penalty points
-  groupPoints: number; // Group standard points
-  groupMinusPoints: number; // Group penalty points
+  maxPoints: number; 
+  minusPoints: number; 
+  groupPoints: number; 
+  groupMinusPoints: number; 
   minLuckyPoints: number;
   maxLuckyPoints: number;
-  minGroupLuckyPoints: number; // NEW: Group lucky min
-  maxGroupLuckyPoints: number; // NEW: Group lucky max
-  spinDuration: number; // Standard duration
-  raceDuration: number; // Race mode duration (usually longer)
+  minGroupLuckyPoints: number; 
+  maxGroupLuckyPoints: number; 
+  spinDuration: number; 
+  raceDuration: number; 
   themeColor: string;
   allowRepeats: boolean;
   soundEnabled: boolean;
+  gameUnlockThresholds: {[key in PresentationMode]?: number};
+  achievementThresholds: {[key: string]: number};
+  congratulationTemplate: string;
+  commonAvatars: string[];
+  specialAvatars: string[];
+  
+  // NEW: Tiered Shop
+  priceTiers: {
+      tier1: number; // Low
+      tier2: number; // Mid
+      tier3: number; // High
+  };
+  avatarTiers: {[avatar: string]: 1 | 2 | 3}; // Map avatar char to tier
+
+  // Deprecated but kept for compatibility logic
+  avatarPrice: number; 
+  
+  warningSeconds: number; 
 }
