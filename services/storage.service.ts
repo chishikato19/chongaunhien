@@ -1,136 +1,52 @@
-import { ClassGroup, Settings, Student, Question, Video } from '../types';
+
+
+import { ClassGroup, Settings, Student, Question, Video, PresentationMode } from '../types';
 
 const CLASSES_KEY = 'cr_classes';
 const SETTINGS_KEY = 'cr_settings';
 const ACTIVE_CLASS_KEY = 'cr_active_class_id';
 const QUESTIONS_KEY = 'cr_questions';
 const CLOUD_URL_KEY = 'cr_cloud_url';
-const VIDEOS_KEY = 'cr_videos'; // NEW
+const VIDEOS_KEY = 'cr_videos';
 
 // --- CHANGELOG ---
 export const CHANGELOG = [
     {
-        version: "1.9",
-        date: "2024-05-29",
+        version: "2.4",
+        date: "2024-06-15",
         changes: [
-            "Ra mắt Thư viện Video Khởi động (Youtube Integration).",
-            "Cho phép lưu link Youtube và phát trực tiếp trong ứng dụng.",
-            "Tự động nhận diện ID video từ link.",
-            "Chế độ xem tập trung: Danh sách bên trái, Video bên phải."
+            "Cập nhật hệ thống Avatar: Tách riêng Avatar thường và Avatar đặc biệt (dành cho danh hiệu).",
+            "Cải tiến phần Cài đặt: Hiển thị đầy đủ điều kiện nhận tất cả các danh hiệu.",
+            "Nâng cấp tính năng Nhập câu hỏi: Hướng dẫn chi tiết và hỗ trợ dạng câu hỏi Sắp xếp từ Word."
         ]
     },
     {
-        version: "1.8.1",
-        date: "2024-05-28",
+        version: "2.3",
+        date: "2024-06-10",
         changes: [
-            "Thêm nút 'Chấm điểm May mắn' (🎲) cho học sinh ở khu vực Lên Bảng.",
-            "Cho phép cộng điểm ngẫu nhiên trực tiếp mà không cần quay lại màn hình chính.",
-            "Hiển thị thông báo số điểm nhận được."
+            "Bổ sung dạng câu hỏi Ghép nối (Matching) với giao diện tương tác.",
+            "Tính năng 'Hiện câu hỏi trước': Cho phép cả lớp xem câu hỏi rồi mới quay số.",
+            "Bảng chúc mừng Danh hiệu (Achievements) hoành tráng, có thể tùy chỉnh lời chúc.",
+            "Khôi phục danh sách lớp đầy đủ từ 6A1 đến 9A3.",
+            "Hỗ trợ nhập câu hỏi ghép nối từ Word (dùng dấu | để ngăn cách)."
         ]
     },
     {
-        version: "1.8",
-        date: "2024-05-27",
+        version: "2.2",
+        date: "2024-06-05",
         changes: [
-            "Ra mắt tính năng 'Khu vực Lên Bảng' (The Stage).",
-            "Cho phép mời học sinh vào danh sách chờ chấm điểm để gọi tiếp người khác.",
-            "Thanh Dock Bar quản lý học sinh đang làm bài: Chấm Đúng/Sai hoặc Mời về chỗ.",
-            "Logic quay số thông minh: Tự động bỏ qua những học sinh đang đứng trên bảng."
+            "Giao diện trả lời câu hỏi mới: Toàn màn hình (Full Screen).",
+            "Thêm dạng câu hỏi 'Sắp xếp thứ tự' (Sequence) với tính năng Kéo & Thả.",
+            "Bổ sung danh hiệu cá nhân (Thần tốc, Chuỗi thắng) và danh hiệu nhóm."
         ]
     },
     {
-        version: "1.7",
-        date: "2024-05-26",
+        version: "2.1",
+        date: "2024-06-01",
         changes: [
-            "Cập nhật Apps Script V2: Hỗ trợ tách dữ liệu (Chunking) để vượt qua giới hạn 50.000 ký tự của Google Sheets.",
-            "Cho phép lưu trữ dữ liệu lớn bao gồm nhiều hình ảnh và câu hỏi.",
-            "Cập nhật hướng dẫn sử dụng phần Cloud Sync."
-        ]
-    },
-    {
-        version: "1.6.2",
-        date: "2024-05-25",
-        changes: [
-            "Tích hợp component MathRenderer.",
-            "Sửa lỗi hiển thị công thức toán học."
-        ]
-    },
-    {
-        version: "1.6.1",
-        date: "2024-05-25",
-        changes: [
-            "Sửa lỗi Upload Google Sheet (CORS Error): Chuyển phương thức gửi dữ liệu sang text/plain.",
-            "Thêm cảnh báo khi dữ liệu quá lớn (vượt quá giới hạn ô Excel).",
-            "Tối ưu hóa tốc độ đồng bộ đám mây."
-        ]
-    },
-    {
-        version: "1.6",
-        date: "2024-05-24",
-        changes: [
-            "Bổ sung hỗ trợ hiển thị công thức Toán học (LaTeX) trong câu hỏi và đáp án.",
-            "Thêm nút 'Reset Điểm Lớp' trong phần Quản lý lớp (chỉ xóa điểm, giữ lại danh sách).",
-            "Cải thiện giao diện nhập liệu câu hỏi và hiển thị công thức."
-        ]
-    },
-    {
-        version: "1.5",
-        date: "2024-05-23",
-        changes: [
-            "Bổ sung tính năng 'Cloud Sync': Đồng bộ dữ liệu với Google Sheets.",
-            "Cho phép lưu trữ và tải dữ liệu từ đám mây để sử dụng trên nhiều thiết bị.",
-            "Hỗ trợ nhập hình ảnh vào câu hỏi thông qua đường dẫn (URL) hoặc tải lên (Base64).",
-            "Sửa lỗi và tối ưu hóa hiệu năng."
-        ]
-    },
-    {
-        version: "1.4",
-        date: "2024-05-22",
-        changes: [
-            "Bổ sung Hệ thống Hướng dẫn sử dụng chi tiết (Tổng quan, Nhập liệu, Luật chơi).",
-            "Cải thiện trải nghiệm trả lời câu hỏi: Dừng 1.5s để xem kết quả Đúng/Sai.",
-            "Thêm hệ thống thông báo (Toast) thân thiện thay cho hộp thoại cảnh báo cũ.",
-            "Nâng cấp giao diện người dùng và tối ưu hóa hiệu năng."
-        ]
-    },
-    {
-        version: "1.3",
-        date: "2024-05-21",
-        changes: [
-            "Thêm tính năng nhập thủ công chi tiết cho câu hỏi trắc nghiệm (Tùy chọn A, B, C, D).",
-            "Logic câu hỏi: Không lặp lại câu hỏi đã trả lời đúng.",
-            "Luồng trả lời: Sau khi trả lời xong sẽ quay lại màn hình cộng điểm thay vì thoát ra.",
-            "Thêm nút Reset trạng thái câu hỏi.",
-            "Hiển thị số phiên bản và lịch sử cập nhật."
-        ]
-    },
-    {
-        version: "1.2",
-        date: "2024-05-20",
-        changes: [
-            "Thêm chế độ 'Trứng nở' (Egg Hatch) với hiệu ứng chim Bồ nông.",
-            "Cập nhật chế độ 'Quay số' (Slot Machine 2 ô) có delay.",
-            "Cải thiện giao diện 5 lá bài và Gắp thú.",
-            "Thêm danh sách dữ liệu mẫu lớn (6a1 - 9a3)."
-        ]
-    },
-    {
-        version: "1.1",
-        date: "2024-05-19",
-        changes: [
-            "Thêm chế độ Gắp thú (Claw Machine) và 5 Lá bài.",
-            "Bổ sung 50+ biểu tượng (Anime, Fantasy, Nghề nghiệp).",
-            "Sửa lỗi hiển thị trên Tablet.",
-            "Thêm cài đặt điểm trừ riêng biệt."
-        ]
-    },
-    {
-        version: "1.0",
-        date: "2024-05-18",
-        changes: [
-            "Ra mắt ứng dụng chọn học sinh ngẫu nhiên.",
-            "Hỗ trợ các chế độ: Đua xe, Vòng quay, Hộp quà...",
-            "Quản lý lớp học và điểm số."
+            "Bổ sung mã Google Apps Script mẫu trong phần Hướng dẫn.",
+            "Cho phép tùy chỉnh mốc điểm mở khóa Game và Danh hiệu trong Cài đặt.",
+            "Thêm tính năng Điểm danh (Đánh dấu vắng mặt)."
         ]
     }
 ];
@@ -160,7 +76,6 @@ export const syncToCloud = async (scriptUrl: string, fullData: any): Promise<{su
             value: fullData
         };
 
-        // FIX: Use text/plain to avoid CORS preflight (OPTIONS) request which GAS doesn't handle
         const response = await fetch(scriptUrl, {
             method: 'POST',
             body: JSON.stringify(payload),
@@ -205,685 +120,149 @@ export const syncFromCloud = async (scriptUrl: string): Promise<{success: boolea
 
 // --- DATA INJECTION START ---
 const DEFAULT_RAW_DATA = `
-6a1:
-An
-Anh
-Ánh
-Bạch
-Bảo
-Bích
-Bin
-Bình
-Chi
-Công
-Dân
-Doanh
-Dương
-Đan
-Đậu
-Hạ
-Hân
-Hiếu
-Hoài
-K'dung
-Long
-Luân
-Ly
-Nam
-Ngân
-Ngọc
-Nhi
-Như
-Ny
-Phúc
-Quỳnh
-Sim
-Thịnh
-Trâm
-Tú
-Tuân
-Vượng
-6a2:
-Sô Phi A
-An
-Anh
-Châu
-Chuyên
-Công
-Cường
-Danh
-Dua
-Giáp
-Hàn
-Hân
-K'Hoan
-Ngọc Hoan
-Hơn
-Khuynh
-Lam
-Lên
-Linh
-My
-Q.Nghĩa
-T.Nghĩa
-Ngọc
-Nhung
-Nhuy
-Nim
-Phong
-Quốc
-Sun
-Thảo
-Thư
-Trâm
-Trí
-Tuấn
-Ý
-Yến
-6a3:
-Đan
-Đăng
-Huân
-Khoa
-Kiên
-Ni Kô
-Rô La
-Lay
-Linh
-K' Lộc
-H.Lộc
-My
-Ngân
-Nghiệp
-B.Ngọc
-Y.Ngọc
-Nhơn
-Như
-Nô
-Ny
-Oanh
-Phát
-Quỳnh
-Tâm
-Thành
-Thiêm
-Trâm
-Trọng
-Tuân
-Vũ
-Vy
-Ý
-My Ya
-6a4:
-Di
-Duy
-Đức
-Huyền
-Khang
-Khin
-Ni La
-Lân
-Linh
-Lợi
-Ly
-Nghi
-Nghoanh
-Nhiên
-Như
-Ha Sa Ny
-Phan
-Phương
-Quân
-Sơn
-T.Thanh
-N.Thanh
-N.Thiện
-T.Thiện
-Thịnh
-Thượng
-Tiên
-Tiến
-Toàn
-Trâm
-Trân
-Tú
-T.Vi
-S.Vi
-Yến
-6a5:
-Ân
-Bren Da
-Đức
-Giang
-B.Hân
-Phạm Hân
-Phan Hân
-Hiền
-Hồng
-Khánh
-Ly
-Ja Mi
-Rê Mi
-My
-Ngọc
-H.Phong
-Đ.Phong
-Phô
-M.Quân
-A.Quân
-Quyên
-Si
-Thắng
-Thọ
-Thy
-Tiên
-Tin
-Tịnh
-Trâm
-Trân
-Trung
-Vinh
-Vy
-Win
-Ý
-Yến
-7a1:
-Ái
-Bảo
-Bi
-Công
-Diệp
-Diêu
-L.Đan
-K.Đan
-Giang
-Giễm
-Hiếu
-Hoàng
-Hương
-K'Kent
-K'Kha
-K'Lễ
-K'Nguyên
-K'Phai
-K'Phấn
-Khang
-Khôi
-Ly
-Lý
-Minh
-Nam
-Nét
-Nghiêm
-Nhân
-Nhật
-Nhi
-Pa
-Phia
-Phương
-Quỳ
-Quý
-Sang
-Thắng
-Thư
-Thức
-Trân
-Trường
-Tuyền
-Vin
-Wa
-7a2:
-Đỗ Anh
-Huy Anh
-Hà Anh
-Ân
-Băng
-Dung
-Giang
-Hiếu
-Hòa
-Hue
-Hùng
-K'Đào
-K'Hiển
-K'Hồng
-K'July
-K'Kha
-K'Nhuil
-K'Thuỷ
-Khải
-Khang
-Kô
-La
-Long
-Luân
-Ly
-Mai
-Đ.Nam
-V.Nam
-Ngọc
-Nụ
-Phong
-Quyên
-Ran
-Ri
-Suy
-Tài
-Tâm
-Thảo
-Tiên
-Toàn
-Trung
-Trường
-Tuấn
-Tuyết
-7a3:
-Diệu
-Đan
-Hạnh
-Hiếu
-Hoàng
-Huy
-Huyền
-K'Bình
-K'Gian
-K'Hải
-K'Thoen
-K'Thư
-K'Tuấn
-Khải
-Khánh
-Khoa
-Kiệt
-Long
-Luân
-Luận
-B.My
-D.My
-Mỹ
-Nam
-Ne
-Nhân
-Nhi
-N.Như
-T.Như
-Phia
-Phong
-Quỳnh
-Sim
-Thành
-Thia
-Thiện
-Trang
-Thị Trâm
-Trần Trâm
-Trúc
-Việt
-Vĩnh
-Ý
-7a4:
-An
-Anh
-Bình
-Dũ
-Duyên
-Đạt
-Đức
-Hiếu
-Hoàng
-In
-K'Danh
-K'Mỵ
-K'Ngọc
-K'Ngọc
-K'Nhiên
-K'Xuyến
-Kiên
-Linh
-Lôs
-P.Nam
-T.Nam
-B.Ngân
-K.Ngân
-Ngọc
-Nguyên
-Nhung
-Như
-Ny
-Oanh
-Quí
-Rôn
-Thảo
-B.Thy
-Đ.Thy
-Trang
-Trung
-Tùng
-K.Tuyết
-A.Tuyết
-Uyên
-Va
-Vy
-N.Ý
-T.Ý
-8a1:
-Bảo
-Belly
-Chô
-Cường
-Duy
-Hóa
-Huế
-Hưng
-Hương
-K'Bin
-K'Khởi
-K'Thượng
-Khôi
-Kônk
-La
-N.Linh
-D.Linh
-Luân
-My
-Nam
-Khánh Ngân
-Kim Ngân
-Ngọc
-Nguyên
-Nguynh
-Phong
-Quân
-Quốc
-Thành
-Thảo
-Thuỳ
-A.Thư
-U.Thư
-Thy
-Tín
-Tới
-Trà
-Trâm
-Trân
-Uyên
-Vi
-Vĩ
-Vũ
-Vy
-8a2:
-Ánh
-Bình
-Diệu
-Duy
-Dương
-Hà
-Hân
-Hiền
-Hiếu
-Huy
-Hưng
-K'Thuỳ
-K'Vy
-Khanh
-Khoa
-Linh
-T.Lộc
-M.Lộc
-K.Ngân
-B.Ngân
-Nghiền
-Ngọc
-Y.Nguyên
-B.Nguyên
-B.Nhi
-T.Nhi
-Phi
-N.Phú
-Q.Phú
-Phúc
-Quân
-Tâm
-Thơ
-Thu
-Thư
-Thy
-Tiên
-Trân
-Trúc
-Truyền
-Úk
-Vinh
-Vĩnh
-Vương
-8a3:
-An
-Cương
-Cường
-Dũng
-Giang
-Hà
-Hy
-K'Hậu
-K'Hiệp
-K'Khôi
-K'Phương
-K'Thành
-K'Thi
-Ka
-Kiên
-T.Linh
-M.Linh
-Luân
-My
-Ngọc
-Nguyên
-Nhất
-Nhật
-T.Pháp
-A.Pháp
-Phép
-Phú
-Phúc
-Q.Phước
-D.Phước
-Quế
-Quyên
-Thảo
-Thùy
-B.Trân
-K.Trân
-L.Trúc
-T.Trúc
-Văn
-Vi
-Vĩ
-Vinh
-Vỹ
-8a4:
-Anh
-Bảo
-Duyên
-Đăng
-Hân
-Hô
-Hồng
-Hun
-Huyền
-K'Hạ
-K'Trúc
-Khải
-Khang
-Đ.Long
-P.Long
-Minh
-H.My
-A.My
-Na
-T.Nam
-B.Nam
-Ngân
-Nguyên
-Nhi
-Nin
-Ny
-Oanh
-T.Phong
-N.Phong
-Quân
-N.Quyên
-H.Quyên
-Si
-Thành
-Thảo
-Thông
-Thy
-Tiến
-Tú
-Tuyết
-Tường
-Vân
-N.Vy
-T.Vy
-9a1:
-Châu Anh
-Tuấn Anh
-Trâm Anh
-Ân
-T.Bảo
-G.Bảo
-Bi
-Bình
-L.Châu
-T.Châu
-Chi
-Diệp
-Đan
-Đạt
-Gia
-Hân
-Hoàng
-Huấn
-Hùng
-K'Đăng
-K'Nghị
-K'Nghĩa
-T.Khang
-S.Khang
-Khí
-Kiệt
-Ký
-Mi
-My
-Ngân
-Ngọc
-Nguyễn
-Y.Nhi
-L.Nhi
-Nhủ
-Nhựt
-Ô
-Phát
-Phúc
-Phước
-Sang
-Sy
-Tâm
-Thành
-Thảo
-Trang
-Vũ
-9a2:
-T.Anh
-Q.Anh
-H.Bảo
-Q.Bảo
-Châu
-Đa
-Đông
-Gô
-Hoa
-Hùng
-Jơn
-K'Hưng
-K'Nga
-K'Quyên
-Khôi
-K' Linh
-P.Linh
-Mạnh
-T.Minh
-Q.Minh
-D.My
-Đơ My
-K.My
-Na
-Nam
-B.Ngân
-T.Ngân
-Nhi
-Nis
-Ny
-Oanh
-Phi
-Mai Phương
-Minh Phương
-Quân
-Quốc
-Quyên
-Ra
-Soan
-Sương
-Tâm
-Trâm
-Va
-Viên
-9a3:
-Anh
-Ánh
-Âu
-Châu
-Cường
-Đan
-Hồng
-Jon
-K'Khôi
-K'Thiện
-K'Thoan
-K'Thoen
-K'Toán
-Khanh
-Khánh
-Kiệt
-Long
-Luân
-Nam
-Nga
-Kim Ngân
-K' Ngân
-Nguyên
-Nhi
-Phát
-Phong
-Quý
-Tây
-Thảo
-Thắng
-Thĩ
-Thủy
-Trâm
-Trí
-Trúc
-Tú
-Tuấn
-Tường
-N.Uyên
-K.Uyên
-Vân
-Vi
-T.Vy
-Y.Vy
-H.Vy
+6A1:
+Nguyễn Văn An (Nam)
+Trần Thị Bích (Nữ)
+Lê Hoàng Cường (Nam)
+Phạm Thu Dung (Nữ)
+Hoàng Văn Em (Nam)
+Vũ Thị Gấm (Nữ)
+Đặng Minh Hiếu (Nam)
+Bùi Thanh Hương (Nữ)
+Đỗ Văn Hùng (Nam)
+Ngô Thị Lan (Nữ)
+
+6A2:
+Dương Văn Khánh (Nam)
+Lý Thị Mơ (Nữ)
+Trương Văn Nam (Nam)
+Hồ Thị Nga (Nữ)
+Cao Văn Phúc (Nam)
+Đinh Thị Quỳnh (Nữ)
+Phan Văn Sơn (Nam)
+Võ Thị Tuyết (Nữ)
+Bạch Văn Tùng (Nam)
+Lương Thị Uyên (Nữ)
+
+6A3:
+Mai Văn Vinh (Nam)
+Trịnh Thị Xuân (Nữ)
+Đoàn Văn Yên (Nam)
+Lâm Thị Yến (Nữ)
+Tô Văn Vũ (Nam)
+Hà Thị Thảo (Nữ)
+Vương Văn Tài (Nam)
+Diệp Thị Hồng (Nữ)
+Khương Văn Duy (Nam)
+Lục Thị Mai (Nữ)
+
+7A1:
+Nguyễn Đức Anh
+Trần Bảo Châu (Nữ)
+Phạm Duy Đạt
+Lê Thị Hạnh (Nữ)
+Hoàng Minh Khôi
+Vũ Ngọc Linh (Nữ)
+Đặng Quốc Minh
+Bùi Phương Nhi (Nữ)
+Đỗ Quang Nhật
+Ngô Thảo Quyên (Nữ)
+
+7A2:
+Dương Tấn Sang
+Lý Thanh Tâm (Nữ)
+Trương Hữu Thắng
+Hồ Cẩm Tú (Nữ)
+Cao Kiến Văn
+Đinh Hải Yến (Nữ)
+Phan Trọng Hiếu
+Võ Kim Ngân (Nữ)
+Bạch Tuấn Kiệt
+Lương Mỹ Duyên (Nữ)
+
+7A3:
+Mai Quốc Bảo
+Trịnh Thu Hà (Nữ)
+Đoàn Minh Tuấn
+Lâm Ngọc Ánh (Nữ)
+Tô Thanh Phong
+Hà Bảo Ngọc (Nữ)
+Vương Quốc Huy
+Diệp Minh Thư (Nữ)
+Khương Duy Tân
+Lục Tuyết Nhi (Nữ)
+
+8A1:
+Nguyễn Hải Đăng
+Trần Ngọc Diệp (Nữ)
+Phạm Thanh Tùng
+Lê Khánh Vy (Nữ)
+Hoàng Văn Minh
+Vũ Thị Thu (Nữ)
+Đặng Hữu Phước
+Bùi Thị Hoa (Nữ)
+Đỗ Thành Long
+Ngô Thị Mai (Nữ)
+
+8A2:
+Dương Văn Lâm
+Lý Thị Hằng (Nữ)
+Trương Văn Quyết
+Hồ Thị Thủy (Nữ)
+Cao Văn Lộc
+Đinh Thị Nhung (Nữ)
+Phan Văn Hậu
+Võ Thị Trang (Nữ)
+Bạch Văn Cường
+Lương Thị Vân (Nữ)
+
+8A3:
+Mai Văn Kiên
+Trịnh Thị Đào (Nữ)
+Đoàn Văn Bách
+Lâm Thị Liễu (Nữ)
+Tô Văn Hưng
+Hà Thị Mận (Nữ)
+Vương Văn Đô
+Diệp Thị Chanh (Nữ)
+Khương Văn Sáng
+Lục Thị Tươi (Nữ)
+
+9A1:
+Nguyễn Thành Đạt
+Trần Thị Kim (Nữ)
+Phạm Văn Đông
+Lê Thị Sen (Nữ)
+Hoàng Văn Nam
+Vũ Thị Huệ (Nữ)
+Đặng Văn Bắc
+Bùi Thị Cúc (Nữ)
+Đỗ Văn Tây
+Ngô Thị Lan (Nữ)
+
+9A2:
+Dương Văn Hùng
+Lý Thị Mận (Nữ)
+Trương Văn Dũng
+Hồ Thị Đào (Nữ)
+Cao Văn Mạnh
+Đinh Thị Hồng (Nữ)
+Phan Văn Cường
+Võ Thị Thắm (Nữ)
+Bạch Văn Bình
+Lương Thị Duyên (Nữ)
+
+9A3:
+Mai Văn Tính
+Trịnh Thị Tình (Nữ)
+Đoàn Văn Nghĩa
+Lâm Thị Lý (Nữ)
+Tô Văn Trí
+Hà Thị Tín (Nữ)
+Vương Văn Dũng
+Diệp Thị Hạnh (Nữ)
+Khương Văn Phúc
+Lục Thị Lộc (Nữ)
 `;
 
 const parseDefaultData = (): ClassGroup[] => {
@@ -894,7 +273,8 @@ const parseDefaultData = (): ClassGroup[] => {
     const usedAvatarsInClass = new Set<string>();
     
     const getUniqueForParse = () => {
-        const available = AVATAR_POOL.filter(a => !usedAvatarsInClass.has(a));
+        // Only use COMMON avatars for default parsing
+        const available = COMMON_AVATARS.filter(a => !usedAvatarsInClass.has(a));
         if (available.length === 0) return getRandomAvatar();
         const picked = available[Math.floor(Math.random() * available.length)];
         usedAvatarsInClass.add(picked);
@@ -915,15 +295,25 @@ const parseDefaultData = (): ClassGroup[] => {
             usedAvatarsInClass.clear();
             classes.push(currentClass);
         } else if (currentClass) {
+            let gender: 'M' | 'F' = 'M';
+            let name = trimmed;
+            if (name.toLowerCase().includes('(nữ)') || name.toLowerCase().includes('(f)')) {
+                gender = 'F';
+            }
+            name = name.replace(/\(.*\)/g, '').trim();
+
             currentClass.students.push({
                 id: generateId(),
-                name: trimmed,
-                gender: 'M',
+                name: name,
+                gender: gender,
                 avatar: getUniqueForParse(),
                 score: 0,
+                cumulativeScore: 0,
                 tags: [],
                 lastPickedDate: null,
-                group: ''
+                group: '',
+                isAbsent: false,
+                achievements: []
             });
         }
     });
@@ -936,30 +326,36 @@ export const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 };
 
-export const AVATAR_POOL = [
+// --- AVATAR SYSTEM ---
+
+// Common avatars for normal student assignment
+export const COMMON_AVATARS = [
   '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', 
   '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆', 
-  '🦅', '🦉', '🦇', '🐺', '🐗', '🦄', '🐝', '🐛', '🦋', '🐌', 
-  '🐞', '🐜', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', 
-  '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', 
-  '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘',
-  '🥋', '🐉', '☁️', '🔥', '👱', '🟠',
-  '👾', '👽', '👻', '🤖', '💩', '🤡', '👹', '👺', 
-  '🧙', '🧙‍♀️', '🧚', '🧚‍♀️', '🧛', '🧛‍♀️', '🧜', '🧜‍♀️', '🧝', '🧝‍♀️',
-  '🧞', '🧞‍♀️', '🧟', '🧟‍♀️', '🧠', '🦾', '🦿', '👁️', '🦸', '🦹',
-  '👮', '👮‍♀️', '👷', '👷‍♀️', '💂', '💂‍♀️', '🕵️', '🕵️‍♀️', '👩‍⚕️', '👨‍⚕️',
-  '👨‍🌾', '👩‍🌾', '👩‍🍳', '👨‍🍳', '👩‍🎤', '👨‍🎤', '👩‍🏫', '👨‍🏫', '👩‍🏭', '👨‍🏭',
-  '👩‍💻', '👨‍💻', '👩‍💼', '👨‍💼', '👩‍🔧', '👨‍🔧', '👩‍🔬', '👨‍🔬', '👩‍🎨', '👨‍🎨',
-  '👩‍🚒', '👨‍🚒', '👩‍✈️', '👨‍✈️', '👩‍🚀', '👨‍🚀', '👩‍⚖️', '👨‍⚖️', '👰', '🤵',
-  '👸', '🤴', '🥷', '🎅', '🤶', '👯', '💃', '🕺', '🕴️', '🧘'
+  '🦅', '🦉', '🦇', '🐺', '🐗', '🐝', '🐛', '🦋', '🐌', 
+  '🐞', '🐜', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎', '🐡', '🐠', '🐟', '🐬', '🐳', 
+  '🐋', '🦈', '🐊', '🦓', '🦍', '🦧', '🦣', '🐘', '👱', '🟠'
 ];
+
+// Special avatars reserved for badges/unlocks (not assigned by default)
+export const SPECIAL_AVATARS = [
+    '🦄', '🐉', '🥋', '👾', '👽', '👻', '🤖', '💩', '🤡', '👹', '👺', 
+    '🧙', '🧙‍♀️', '🧚', '🧚‍♀️', '🧛', '🧛‍♀️', '🧜', '🧜‍♀️', '🧝', '🧝‍♀️',
+    '🧞', '🧞‍♀️', '🧟', '🧟‍♀️', '🧠', '🦾', '🦿', '👁️', '🦸', '🦹',
+    '👮', '👮‍♀️', '👷', '👷‍♀️', '💂', '💂‍♀️', '🕵️', '🕵️‍♀️', '👩‍⚕️', '👨‍⚕️',
+    '👩‍🚀', '👨‍🚀', '👩‍⚖️', '👨‍⚖️', '👰', '🤵', '👸', '🤴', '🥷', '🎅', 
+    '🤶', '👯', '💃', '🕺', '🕴️', '🧘', '🔥', '⚡', '🌈', '☁️'
+];
+
+export const AVATAR_POOL = [...COMMON_AVATARS, ...SPECIAL_AVATARS];
 
 export const GROUP_AVATAR_POOL = ['🔴', '🔵', '🟢', '🟡', '🟣', '🟠', '⚫', '⚪', '🟤', '🪐', '🌍', '🌕', '🌟', '🔥', '💧', '⚡', '🌈', '🍎', '🍇', '🍉'];
 
-export const getRandomAvatar = () => AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)];
+export const getRandomAvatar = () => COMMON_AVATARS[Math.floor(Math.random() * COMMON_AVATARS.length)];
 
 export const getUniqueRandomAvatar = (excludeAvatars: string[] = []) => {
-    const available = AVATAR_POOL.filter(a => !excludeAvatars.includes(a));
+    // Prefer COMMON avatars
+    const available = COMMON_AVATARS.filter(a => !excludeAvatars.includes(a));
     if (available.length === 0) return getRandomAvatar();
     return available[Math.floor(Math.random() * available.length)];
 };
@@ -969,7 +365,16 @@ export const getClasses = (): ClassGroup[] => {
   const data = localStorage.getItem(CLASSES_KEY);
   
   if (data) {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data) as ClassGroup[];
+      // Migration: Ensure cumulativeScore and isAbsent exists
+      return parsed.map(c => ({
+          ...c,
+          students: c.students.map(s => ({
+              ...s,
+              cumulativeScore: s.cumulativeScore ?? s.score,
+              isAbsent: s.isAbsent ?? false
+          }))
+      }));
   } else {
       const defaultData = parseDefaultData();
       saveClasses(defaultData);
@@ -1007,7 +412,6 @@ export const saveVideos = (videos: Video[]) => {
 };
 
 export const extractYoutubeId = (url: string): string | null => {
-    // Regex for standard, short, embed, and v= formats
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
@@ -1028,7 +432,29 @@ export const getSettings = (): Settings => {
         raceDuration: 10, 
         themeColor: 'indigo', 
         allowRepeats: false,
-        soundEnabled: true
+        soundEnabled: true,
+        gameUnlockThresholds: {
+            [PresentationMode.WHEEL]: 100,
+            [PresentationMode.SLOT]: 200,
+            [PresentationMode.RACE]: 300,
+            [PresentationMode.BOX]: 400,
+            [PresentationMode.FLIP]: 500,
+            [PresentationMode.SPOTLIGHT]: 600,
+            [PresentationMode.GRID_ELIMINATION]: 700,
+            [PresentationMode.DICE]: 800,
+            [PresentationMode.LUCKY_CARDS]: 900,
+            [PresentationMode.CLAW_MACHINE]: 1000,
+            [PresentationMode.GALAXY]: 1500,
+            [PresentationMode.EGG_HATCH]: 2000,
+        },
+        achievementThresholds: {
+            'HIGH_SCORE_20': 20,
+            'HIGH_SCORE_50': 50,
+            'HIGH_SCORE_100': 100,
+            'HIGH_SCORE_200': 200,
+            'HIGH_SCORE_500': 500,
+        },
+        congratulationTemplate: "Chúc mừng {name} đã đạt danh hiệu {badge}!"
       };
   }
   
@@ -1046,10 +472,39 @@ export const getSettings = (): Settings => {
     raceDuration: 10, 
     themeColor: 'indigo', 
     allowRepeats: false,
-    soundEnabled: true
+    soundEnabled: true,
+    gameUnlockThresholds: {
+        [PresentationMode.WHEEL]: 100,
+        [PresentationMode.SLOT]: 200,
+        [PresentationMode.RACE]: 300,
+        [PresentationMode.BOX]: 400,
+        [PresentationMode.FLIP]: 500,
+        [PresentationMode.SPOTLIGHT]: 600,
+        [PresentationMode.GRID_ELIMINATION]: 700,
+        [PresentationMode.DICE]: 800,
+        [PresentationMode.LUCKY_CARDS]: 900,
+        [PresentationMode.CLAW_MACHINE]: 1000,
+        [PresentationMode.GALAXY]: 1500,
+        [PresentationMode.EGG_HATCH]: 2000,
+    },
+    achievementThresholds: {
+        'HIGH_SCORE_20': 20,
+        'HIGH_SCORE_50': 50,
+        'HIGH_SCORE_100': 100,
+        'HIGH_SCORE_200': 200,
+        'HIGH_SCORE_500': 500,
+    },
+    congratulationTemplate: "Chúc mừng {name} đã đạt danh hiệu {badge}!"
   };
 
-  return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
+  const saved = data ? JSON.parse(data) : {};
+  // Merge deep for thresholds
+  return { 
+      ...defaultSettings, 
+      ...saved,
+      gameUnlockThresholds: { ...defaultSettings.gameUnlockThresholds, ...saved.gameUnlockThresholds },
+      achievementThresholds: { ...defaultSettings.achievementThresholds, ...saved.achievementThresholds }
+  };
 };
 
 export const saveSettings = (settings: Settings) => {

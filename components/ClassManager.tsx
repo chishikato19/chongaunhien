@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { ClassGroup, Student, Gender } from '../types';
 import { getRandomAvatar, getUniqueRandomAvatar, AVATAR_POOL, generateId } from '../services/storage.service';
-import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2, RotateCcw, CheckSquare, Square, Layers, Save, UserX, UserCheck, Shield, Sparkles } from 'lucide-react';
 
 interface ClassManagerProps {
   classes: ClassGroup[];
@@ -10,12 +11,33 @@ interface ClassManagerProps {
   onSetActive: (id: string) => void;
 }
 
+// Badge Definitions for UI
+const BADGE_ICONS: {[key: string]: string} = {
+    'FIRST_PICK': '🌱', 
+    'HIGH_SCORE_20': '🔥', 
+    'HIGH_SCORE_50': '👑', 
+    'HIGH_SCORE_100': '💎', 
+    'HIGH_SCORE_200': '🚀', 
+    'HIGH_SCORE_500': '🌌', 
+    'LUCKY_STAR': '🍀', 
+    'SURVIVOR': '🛡️', 
+    'QUIZ_WIZARD': '🧙‍♂️'
+};
+
 const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onUpdateClasses, onSetActive }) => {
   const [newClassName, setNewClassName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importText, setImportText] = useState('');
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [groupCountInput, setGroupCountInput] = useState<number>(4); // Default to 4 groups
+  const [groupCountInput, setGroupCountInput] = useState<number>(4);
+  
+  // Bulk Selection State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+  const [bulkGroupName, setBulkGroupName] = useState('');
+
+  // Attendance Mode
+  const [isAttendanceMode, setIsAttendanceMode] = useState(false);
 
   // --- Class Actions ---
   const addClass = () => {
@@ -42,11 +64,31 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
 
   const resetClassScores = () => {
       if (!activeClass) return;
-      if (window.confirm(`Bạn có chắc muốn đặt lại điểm của toàn bộ học sinh lớp "${activeClass.name}" về 0 không?`)) {
-          const updatedStudents = activeClass.students.map(s => ({ ...s, score: 0 }));
+      
+      if (window.confirm(`Xác nhận reset ĐIỂM PHIÊN (Current Score) của lớp "${activeClass.name}" về 0?\nĐiểm Tích Lũy (XP) sẽ được giữ nguyên.`)) {
+          const updatedStudents = activeClass.students.map(s => ({ 
+              ...s, 
+              score: 0,
+              lastPickedDate: null
+          }));
           const updatedClass = { ...activeClass, students: updatedStudents };
           onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
-          alert("Đã reset điểm thành công!");
+          alert("Đã reset điểm phiên thành công!");
+      }
+  };
+
+  const resetClassXP = () => {
+      if (!activeClass) return;
+      
+      if (window.confirm(`CẢNH BÁO: Bạn có chắc chắn muốn reset ĐIỂM TÍCH LŨY (XP) của toàn bộ học sinh trong lớp "${activeClass.name}" về 0 không?\nHành động này không thể hoàn tác và sẽ khóa lại các trò chơi yêu cầu XP.`)) {
+          const updatedStudents = activeClass.students.map(s => ({ 
+              ...s, 
+              cumulativeScore: 0,
+              achievements: [] // Clear achievements too as they are tied to XP mostly
+          }));
+          const updatedClass = { ...activeClass, students: updatedStudents };
+          onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
+          alert("Đã reset XP và Danh hiệu thành công!");
       }
   };
 
@@ -55,19 +97,19 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
 
   const addStudent = (name: string, gender: Gender = 'M') => {
     if (!activeClass) return;
-    
-    // Get currently used avatars to avoid duplicates
     const usedAvatars = activeClass.students.map(s => s.avatar);
-
     const student: Student = {
       id: generateId(),
       name,
       gender,
       avatar: getUniqueRandomAvatar(usedAvatars),
       score: 0,
+      cumulativeScore: 0,
       tags: [],
       lastPickedDate: null,
-      group: ''
+      group: '',
+      achievements: [],
+      isAbsent: false
     };
     const updatedClass = { ...activeClass, students: [...activeClass.students, student] };
     onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
@@ -76,23 +118,15 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
   const processImport = () => {
     if (!activeClass) return;
     const lines = importText.split('\n').filter(l => l.trim());
-    
-    // Track used avatars within this import batch and existing class
     const usedAvatars = new Set<string>(activeClass.students.map(s => s.avatar));
 
     const newStudents: Student[] = lines.map(line => {
-      // Simple parsing: Look for (F) or (M), default to M if unknown, remove flags from name
       let gender: Gender = 'M';
       let name = line.trim();
-      
       if (name.toUpperCase().includes('(NỮ)') || name.toUpperCase().includes('(F)') || name.toLowerCase().includes('female')) {
         gender = 'F';
       }
-      
-      // Clean name
       name = name.replace(/\(.*\)/g, '').trim();
-
-      // Pick unique
       const avatar = getUniqueRandomAvatar(Array.from(usedAvatars) as string[]);
       usedAvatars.add(avatar);
 
@@ -102,9 +136,12 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
         gender,
         avatar,
         score: 0,
+        cumulativeScore: 0,
         tags: [],
         lastPickedDate: null,
-        group: ''
+        group: '',
+        achievements: [],
+        isAbsent: false
       };
     });
 
@@ -130,6 +167,13 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
     onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
   };
 
+  const toggleAbsent = (studentId: string) => {
+     if (!activeClass) return;
+     const updatedStudents = activeClass.students.map(s => s.id === studentId ? { ...s, isAbsent: !s.isAbsent } : s);
+     const updatedClass = { ...activeClass, students: updatedStudents };
+     onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
+  };
+
   const autoSplitGroups = () => {
       if (!activeClass) return;
       const count = groupCountInput;
@@ -137,24 +181,60 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
           alert("Số nhóm phải lớn hơn 0");
           return;
       }
-
-      // Shuffle students first
       const shuffled = [...activeClass.students].sort(() => 0.5 - Math.random());
-      
       const updatedStudents = shuffled.map((s, idx) => ({
           ...s,
           group: `Nhóm ${(idx % count) + 1}`
       }));
-
       const updatedClass = { ...activeClass, students: updatedStudents };
       onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
       alert(`Đã chia lớp thành ${count} nhóm ngẫu nhiên.`);
   };
 
+  // --- Bulk Selection Logic ---
+  const toggleSelection = (id: string) => {
+      const newSet = new Set(selectedStudentIds);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      setSelectedStudentIds(newSet);
+  };
+
+  const selectAll = () => {
+      if (!activeClass) return;
+      if (selectedStudentIds.size === activeClass.students.length) setSelectedStudentIds(new Set());
+      else setSelectedStudentIds(new Set(activeClass.students.map(s => s.id)));
+  };
+
+  const assignBulkGroup = () => {
+      if (!activeClass || !bulkGroupName.trim()) {
+          alert("Vui lòng nhập tên nhóm!");
+          return;
+      }
+      if (selectedStudentIds.size === 0) {
+          alert("Chưa chọn học sinh nào!");
+          return;
+      }
+
+      const updatedStudents = activeClass.students.map(s => {
+          if (selectedStudentIds.has(s.id)) {
+              return { ...s, group: bulkGroupName.trim() };
+          }
+          return s;
+      });
+
+      const updatedClass = { ...activeClass, students: updatedStudents };
+      onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
+      
+      // Reset
+      setIsSelectionMode(false);
+      setSelectedStudentIds(new Set());
+      setBulkGroupName('');
+  };
+
   const exportCSV = () => {
     if (!activeClass) return;
-    const headers = "ID,Name,Gender,Score,Group\n";
-    const rows = activeClass.students.map(s => `${s.id},${s.name},${s.gender},${s.score},${s.group || ''}`).join('\n');
+    const headers = "ID,Name,Gender,Score,CumulativeScore,Group,Achievements,IsAbsent\n";
+    const rows = activeClass.students.map(s => `${s.id},${s.name},${s.gender},${s.score},${s.cumulativeScore || 0},${s.group || ''},${(s.achievements || []).join('|')},${s.isAbsent ? 'Yes' : 'No'}`).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -170,12 +250,16 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
             <Users className="text-indigo-600" /> Quản Lý Lớp Học
         </h2>
         
-        {/* Class Selector */}
         <div className="flex gap-2 w-full md:w-auto">
            <select 
              className="border border-gray-300 rounded-lg px-3 py-2 flex-grow focus:ring-2 focus:ring-indigo-500"
              value={activeClassId || ''}
-             onChange={(e) => onSetActive(e.target.value)}
+             onChange={(e) => {
+                 onSetActive(e.target.value);
+                 setIsSelectionMode(false);
+                 setSelectedStudentIds(new Set());
+                 setIsAttendanceMode(false);
+             }}
            >
              <option value="" disabled>Chọn lớp...</option>
              {classes.map(c => <option key={c.id} value={c.id}>{c.name} ({c.students.length} HS)</option>)}
@@ -188,7 +272,6 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
         </div>
       </div>
 
-      {/* Add Class */}
       <div className="flex gap-2 mb-6 flex-shrink-0">
         <input 
           type="text" 
@@ -206,31 +289,90 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
         <>
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 border-b pb-4 items-start sm:items-center flex-shrink-0">
                 <button onClick={() => setIsImporting(!isImporting)} className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-md hover:bg-green-100 text-sm font-medium">
-                    <FileSpreadsheet size={16} /> Nhập Excel/Dán
+                    <FileSpreadsheet size={16} /> Nhập Excel
                 </button>
+                
+                <div className="w-px h-6 bg-gray-300 hidden sm:block"></div>
+
+                {/* Group Tools */}
                 <div className="flex items-center gap-2 bg-purple-50 p-1 rounded-md">
-                     <span className="text-xs font-semibold text-purple-700 pl-2">Số nhóm:</span>
+                     <span className="text-xs font-semibold text-purple-700 pl-2 hidden md:inline">Chia nhóm:</span>
                      <input 
                         type="number" 
                         min="1" 
                         max="20"
-                        className="w-12 text-sm border-purple-200 border rounded px-1 py-0.5"
+                        className="w-10 text-sm border-purple-200 border rounded px-1 py-0.5"
                         value={groupCountInput}
                         onChange={(e) => setGroupCountInput(parseInt(e.target.value) || 1)}
                      />
-                    <button onClick={autoSplitGroups} className="flex items-center gap-2 px-3 py-1 bg-purple-200 text-purple-800 rounded-md hover:bg-purple-300 text-sm font-medium transition-colors">
-                        <Grid2X2 size={16} /> Chia Ngẫu Nhiên
+                    <button onClick={autoSplitGroups} className="flex items-center gap-2 px-2 py-1 bg-purple-200 text-purple-800 rounded-md hover:bg-purple-300 text-sm font-medium transition-colors" title="Chia ngẫu nhiên">
+                        <Grid2X2 size={16} /> <span className="hidden lg:inline">Ngẫu nhiên</span>
                     </button>
                 </div>
-                <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 text-sm font-medium">
-                    <Download size={16} /> Xuất CSV
-                </button>
-                <button onClick={resetClassScores} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-md hover:bg-red-100 text-sm font-medium ml-auto">
-                    <RotateCcw size={16} /> Reset Điểm Lớp
-                </button>
-            </div>
 
-            {/* Import Area */}
+                <div className="flex items-center gap-2 bg-blue-50 p-1 rounded-md">
+                     <button 
+                        onClick={() => {
+                            setIsSelectionMode(!isSelectionMode);
+                            setIsAttendanceMode(false);
+                            setSelectedStudentIds(new Set());
+                        }} 
+                        className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${isSelectionMode ? 'bg-blue-600 text-white' : 'bg-blue-200 text-blue-800 hover:bg-blue-300'}`}
+                     >
+                        <Layers size={16} /> Chọn nhóm
+                     </button>
+                </div>
+
+                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-md">
+                     <button 
+                        onClick={() => {
+                            setIsAttendanceMode(!isAttendanceMode);
+                            setIsSelectionMode(false);
+                        }} 
+                        className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${isAttendanceMode ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                     >
+                        {isAttendanceMode ? <UserCheck size={16} /> : <UserX size={16} />} 
+                        Điểm danh
+                     </button>
+                </div>
+                
+                <div className="ml-auto flex gap-2">
+                    <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium" title="Xuất CSV">
+                        <Download size={16} />
+                    </button>
+                    <button onClick={resetClassScores} className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-md hover:bg-orange-100 text-sm font-medium" title="Reset điểm phiên">
+                        <RotateCcw size={16} />
+                    </button>
+                    <button onClick={resetClassXP} className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-md hover:bg-red-100 text-sm font-medium" title="Reset XP Lớp (Cẩn thận!)">
+                        <Sparkles size={16} />
+                    </button>
+                </div>
+            </div>
+            
+            {/* BULK SELECTION ACTION BAR */}
+            {isSelectionMode && (
+                <div className="mb-4 bg-blue-50 border border-blue-200 p-2 rounded-lg flex items-center gap-3 animate-fade-in">
+                    <button onClick={selectAll} className="text-xs font-bold text-blue-700 hover:underline px-2">
+                        {selectedStudentIds.size === activeClass.students.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                    </button>
+                    <span className="text-xs font-semibold text-gray-500">Đã chọn: {selectedStudentIds.size}</span>
+                    <div className="w-px h-4 bg-blue-300"></div>
+                    <input 
+                        className="text-sm px-2 py-1 rounded border border-blue-300 outline-none w-40"
+                        placeholder="Nhập tên nhóm..."
+                        value={bulkGroupName}
+                        onChange={e => setBulkGroupName(e.target.value)}
+                    />
+                    <button 
+                        onClick={assignBulkGroup}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-bold hover:bg-blue-700 flex items-center gap-1"
+                    >
+                        <Save size={14} /> Lưu
+                    </button>
+                    <button onClick={() => setIsSelectionMode(false)} className="ml-auto text-gray-400 hover:text-gray-600"><X size={16}/></button>
+                </div>
+            )}
+
             {isImporting && (
                 <div className="mb-4 bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 flex-shrink-0">
                     <h4 className="text-sm font-semibold mb-2 text-gray-600">Dán danh sách tên (Mỗi tên một dòng):</h4>
@@ -245,18 +387,44 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
                 </div>
             )}
 
-            {/* Student List Grid - ADJUSTED HEIGHT */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 overflow-y-auto pr-2 flex-grow min-h-0">
                 {activeClass.students.map(student => (
-                    <div key={student.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-indigo-300 transition-colors group h-max">
+                    <div 
+                        key={student.id} 
+                        onClick={() => {
+                            if (isSelectionMode) toggleSelection(student.id);
+                            else if (isAttendanceMode) toggleAbsent(student.id);
+                        }}
+                        className={`flex items-center justify-between bg-gray-50 p-3 rounded-lg border transition-all cursor-pointer h-max group relative
+                        ${isSelectionMode && selectedStudentIds.has(student.id) ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : ''}
+                        ${student.isAbsent ? 'opacity-50 grayscale bg-gray-200 border-dashed' : 'border-gray-200 hover:border-indigo-300'}
+                        `}
+                    >
+                        {student.isAbsent && <div className="absolute inset-0 flex items-center justify-center text-gray-500 font-bold uppercase text-xs tracking-widest pointer-events-none z-10">Vắng</div>}
+                        
                         <div className="flex items-center gap-3 overflow-hidden">
+                            {isSelectionMode && (
+                                <div className={`text-blue-600 ${selectedStudentIds.has(student.id) ? 'opacity-100' : 'opacity-30'}`}>
+                                    {selectedStudentIds.has(student.id) ? <CheckSquare size={18}/> : <Square size={18}/>}
+                                </div>
+                            )}
+                            {isAttendanceMode && (
+                                <div className={`text-gray-600`}>
+                                    {student.isAbsent ? <UserX size={18} className="text-red-500"/> : <UserCheck size={18} className="text-green-500"/>}
+                                </div>
+                            )}
                             <span className="text-2xl">{student.avatar}</span>
                             <div className="min-w-0">
-                                <p className="font-medium text-gray-800 truncate">{student.name}</p>
+                                <div className="flex items-center gap-1">
+                                    <p className="font-medium text-gray-800 truncate">{student.name}</p>
+                                    {student.achievements && student.achievements.map((badge, idx) => (
+                                        <span key={idx} className="text-[10px]" title={badge}>{BADGE_ICONS[badge]}</span>
+                                    ))}
+                                </div>
                                 <div className="flex items-center gap-2">
-                                     <p className="text-xs text-gray-500 flex items-center gap-1">
+                                     <p className="text-xs text-gray-500 flex items-center gap-1" title="Điểm phiên / Tích lũy">
                                         <span className={`w-2 h-2 rounded-full ${student.gender === 'M' ? 'bg-blue-400' : 'bg-pink-400'}`}></span>
-                                        {student.score} điểm
+                                        {student.score} <span className="text-[10px] text-gray-400">({student.cumulativeScore || 0})</span>
                                     </p>
                                     {student.group && (
                                         <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">
@@ -266,19 +434,20 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setEditingStudent(student)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-white">
-                                <Edit2 size={14} />
-                            </button>
-                            <button onClick={() => deleteStudent(student.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-white">
-                                <X size={14} />
-                            </button>
-                        </div>
+                        {!isSelectionMode && !isAttendanceMode && (
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={(e) => { e.stopPropagation(); setEditingStudent(student); }} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-md hover:bg-white">
+                                    <Edit2 size={14} />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); deleteStudent(student.id); }} className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-white">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
 
-            {/* Add Single Student Input (Quick Add) */}
             <div className="mt-4 flex gap-2 flex-shrink-0">
                 <input 
                     type="text" 
@@ -324,6 +493,26 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
                         value={editingStudent.group || ''} 
                         onChange={e => setEditingStudent({...editingStudent, group: e.target.value})} 
                       />
+                  </div>
+                  <div className="flex gap-3 mb-3">
+                      <div className="flex-1">
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Điểm phiên</label>
+                          <input 
+                            type="number"
+                            className="w-full border rounded-md p-2" 
+                            value={editingStudent.score} 
+                            onChange={e => setEditingStudent({...editingStudent, score: parseInt(e.target.value) || 0})} 
+                          />
+                      </div>
+                      <div className="flex-1">
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Điểm Tích Lũy</label>
+                          <input 
+                            type="number"
+                            className="w-full border rounded-md p-2" 
+                            value={editingStudent.cumulativeScore || 0} 
+                            onChange={e => setEditingStudent({...editingStudent, cumulativeScore: parseInt(e.target.value) || 0})} 
+                          />
+                      </div>
                   </div>
                   <div className="mb-3">
                       <label className="block text-xs font-semibold text-gray-500 mb-1">Giới tính</label>
