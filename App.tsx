@@ -55,9 +55,9 @@ const HELP_CONTENT = [
             <div className="space-y-2 text-sm text-gray-600">
                 <p><b>Lưu ý:</b> Để lưu được nhiều dữ liệu (ảnh, câu hỏi dài) mà không bị lỗi giới hạn 50.000 ký tự, bạn cần sử dụng đoạn mã <b>Apps Script V2</b> dưới đây.</p>
                 <ol className="list-decimal pl-5 space-y-1">
-                    <li>Tạo 1 Google Sheet, vào <b>Tiện ích mở rộng > Apps Script</b>.</li>
+                    <li>Tạo 1 Google Sheet, vào <b>Tiện ích mở rộng chọn Apps Script</b>.</li>
                     <li>Copy toàn bộ đoạn code dưới đây và dán đè vào script cũ.</li>
-                    <li>Nhấn <b>Triển khai (Deploy)</b> > <b>Tùy chọn triển khai mới (New deployment)</b>.</li>
+                    <li>Nhấn <b>Triển khai (Deploy)</b> chọn <b>Tùy chọn triển khai mới (New deployment)</b>.</li>
                     <li>Chọn loại: <b>Web App</b>. Quyền truy cập: <b>Anyone (Bất kỳ ai)</b>.</li>
                     <li>Copy URL mới và dán vào phần cài đặt của App.</li>
                 </ol>
