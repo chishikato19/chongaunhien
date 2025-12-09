@@ -18,6 +18,13 @@ export interface ClassGroup {
   students: Student[];
 }
 
+export interface Video {
+  id: string;
+  title: string;
+  url: string;
+  videoId: string;
+}
+
 export enum PresentationMode {
   SIMPLE = 'SIMPLE',
   RACE = 'RACE',
@@ -53,6 +60,7 @@ export interface Question {
   correctAnswer?: number; // Index of correct option (0, 1, 2...) for MCQ
   essayAnswer?: string; // Teacher notes for essay
   isAnswered?: boolean; // Track if question has been used
+  image?: string; // Base64 or URL
 }
 
 export interface Settings {
