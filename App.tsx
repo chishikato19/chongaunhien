@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database, Maximize, Minimize, Clock, PlayCircle, PauseCircle, RotateCcw, HelpCircle, BookOpen, CheckCircle, XCircle, FileClock, Tag, AlertTriangle, Cloud, CloudUpload, CloudDownload, Link, Save, Copy, Pin, Trash, CornerDownLeft } from 'lucide-react';
+import { Settings, Play, BarChart2, Settings as SettingsIcon, Home, UserCheck, ShieldAlert, Award, RefreshCw, X, Grid2X2, Timer, Volume2, Trophy, LogOut, ChevronDown, ChevronUp, Users, Hand, Download, Upload, Database, Maximize, Minimize, Clock, PlayCircle, PauseCircle, RotateCcw, HelpCircle, BookOpen, CheckCircle, XCircle, FileClock, Tag, AlertTriangle, Cloud, CloudUpload, CloudDownload, Link, Save, Copy, Pin, Trash, CornerDownLeft, Dices, Youtube } from 'lucide-react';
 import * as Storage from './services/storage.service';
 import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings, Question } from './types';
 import ClassManager from './components/ClassManager';
 import QuestionManager from './components/QuestionManager'; 
+import VideoLibrary from './components/VideoLibrary';
 import { VisualizationContainer } from './components/Visualizers';
 import { playTick, playWin } from './services/sound';
 import { MathRenderer } from './components/MathRenderer';
@@ -54,9 +55,9 @@ const HELP_CONTENT = [
             <div className="space-y-2 text-sm text-gray-600">
                 <p><b>Lưu ý:</b> Để lưu được nhiều dữ liệu (ảnh, câu hỏi dài) mà không bị lỗi giới hạn 50.000 ký tự, bạn cần sử dụng đoạn mã <b>Apps Script V2</b> dưới đây.</p>
                 <ol className="list-decimal pl-5 space-y-1">
-                    <li>Tạo 1 Google Sheet, vào <b>Tiện ích mở rộng > Apps Script</b>.</li>
+                    <li>Tạo 1 Google Sheet, vào <b>Tiện ích mở rộng chọn Apps Script</b>.</li>
                     <li>Copy toàn bộ đoạn code dưới đây và dán đè vào script cũ.</li>
-                    <li>Nhấn <b>Triển khai (Deploy)</b> > <b>Tùy chọn triển khai mới (New deployment)</b>.</li>
+                    <li>Nhấn <b>Triển khai (Deploy)</b> chọn <b>Tùy chọn triển khai mới (New deployment)</b>.</li>
                     <li>Chọn loại: <b>Web App</b>. Quyền truy cập: <b>Anyone (Bất kỳ ai)</b>.</li>
                     <li>Copy URL mới và dán vào phần cài đặt của App.</li>
                 </ol>
@@ -155,6 +156,7 @@ function App() {
   const [showChangelog, setShowChangelog] = useState(false); 
   const [showHelp, setShowHelp] = useState(false); 
   const [activeHelpTab, setActiveHelpTab] = useState(0);
+  const [showVideoLib, setShowVideoLib] = useState(false); // NEW
 
   const [isFullScreen, setIsFullScreen] = useState(false);
 
@@ -668,6 +670,16 @@ function App() {
       handleRemoveFromStage(student.id);
   };
 
+  const handleLuckyGradeFromStage = (student: Student) => {
+      const isGroup = student.id.startsWith('GROUP_');
+      const min = isGroup ? settings.minGroupLuckyPoints : settings.minLuckyPoints;
+      const max = isGroup ? settings.maxGroupLuckyPoints : settings.maxLuckyPoints;
+      const points = Math.floor(Math.random() * (max - min + 1)) + min;
+      
+      showToast(`${student.name}: +${points} điểm may mắn!`, 'success');
+      handleGradeFromStage(student, points);
+  };
+
   const handleOpenQuestion = () => {
       const availableQuestions = questions.filter(q => !q.isAnswered);
       
@@ -1022,6 +1034,9 @@ function App() {
                                            <button onClick={() => handleGradeFromStage(student, -minusPoints)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-sm" title="Sai (-Điểm)">
                                                <XCircle size={16} />
                                            </button>
+                                           <button onClick={() => handleLuckyGradeFromStage(student)} className="p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 shadow-sm" title="Điểm may mắn ngẫu nhiên">
+                                               <Dices size={16} />
+                                           </button>
                                            <button onClick={() => handleRemoveFromStage(student.id)} className="p-2 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300" title="Về chỗ (Hủy)">
                                                <CornerDownLeft size={16} />
                                            </button>
@@ -1247,6 +1262,9 @@ function App() {
               {toast.message}
           </div>
       )}
+      
+      {/* VIDEO LIBRARY MODAL */}
+      {showVideoLib && <VideoLibrary onClose={() => setShowVideoLib(false)} />}
 
       {showTimerModal && (
           <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4 pointer-events-auto">
@@ -1533,10 +1551,13 @@ function App() {
                   <div className="flex items-center gap-2">
                       <div className="bg-indigo-600 text-white p-1.5 rounded-lg"><Play size={20} fill="currentColor"/></div>
                       <span className="font-bold text-lg tracking-tight text-gray-800">ClassRandomizer</span>
-                      <button onClick={() => setShowChangelog(true)} className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-black border border-indigo-200 hover:bg-indigo-200">v1.8</button>
+                      <button onClick={() => setShowChangelog(true)} className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-black border border-indigo-200 hover:bg-indigo-200">v1.9</button>
                   </div>
                   
                   <div className="flex items-center gap-1 md:gap-2">
+                      <button onClick={() => setShowVideoLib(true)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100" title="Thư viện Video">
+                          <Youtube size={20} />
+                      </button>
                       <button onClick={() => setShowTimerModal(true)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg hover:text-indigo-600 transition-colors" title="Đồng hồ">
                           <Timer size={20} />
                       </button>
