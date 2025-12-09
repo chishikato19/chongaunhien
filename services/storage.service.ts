@@ -1,13 +1,33 @@
-import { ClassGroup, Settings, Student, Question } from '../types';
+import { ClassGroup, Settings, Student, Question, Video } from '../types';
 
 const CLASSES_KEY = 'cr_classes';
 const SETTINGS_KEY = 'cr_settings';
 const ACTIVE_CLASS_KEY = 'cr_active_class_id';
 const QUESTIONS_KEY = 'cr_questions';
-const CLOUD_URL_KEY = 'cr_cloud_url'; // NEW KEY
+const CLOUD_URL_KEY = 'cr_cloud_url';
+const VIDEOS_KEY = 'cr_videos'; // NEW
 
 // --- CHANGELOG ---
 export const CHANGELOG = [
+    {
+        version: "1.9",
+        date: "2024-05-29",
+        changes: [
+            "Ra mắt Thư viện Video Khởi động (Youtube Integration).",
+            "Cho phép lưu link Youtube và phát trực tiếp trong ứng dụng.",
+            "Tự động nhận diện ID video từ link.",
+            "Chế độ xem tập trung: Danh sách bên trái, Video bên phải."
+        ]
+    },
+    {
+        version: "1.8.1",
+        date: "2024-05-28",
+        changes: [
+            "Thêm nút 'Chấm điểm May mắn' (🎲) cho học sinh ở khu vực Lên Bảng.",
+            "Cho phép cộng điểm ngẫu nhiên trực tiếp mà không cần quay lại màn hình chính.",
+            "Hiển thị thông báo số điểm nhận được."
+        ]
+    },
     {
         version: "1.8",
         date: "2024-05-27",
@@ -972,6 +992,25 @@ export const getQuestions = (): Question[] => {
 export const saveQuestions = (questions: Question[]) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(QUESTIONS_KEY, JSON.stringify(questions));
+};
+
+// --- VIDEO STORAGE (NEW) ---
+export const getVideos = (): Video[] => {
+    if (typeof window === 'undefined') return [];
+    const data = localStorage.getItem(VIDEOS_KEY);
+    return data ? JSON.parse(data) : [];
+};
+
+export const saveVideos = (videos: Video[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(VIDEOS_KEY, JSON.stringify(videos));
+};
+
+export const extractYoutubeId = (url: string): string | null => {
+    // Regex for standard, short, embed, and v= formats
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
 };
 
 export const getSettings = (): Settings => {
