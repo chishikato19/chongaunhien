@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Play, Settings as SettingsIcon, Mic, Maximize, Minimize, Clock, RotateCcw, LogOut, HelpCircle, BookOpen, Hand, Youtube, X, PartyPopper, ShoppingBag, Info, AlertCircle, Trophy } from 'lucide-react';
 import * as Storage from './services/storage.service';
@@ -310,13 +308,8 @@ function App() {
         });
         handleUpdateClasses(classes.map(c => c.id === activeClass.id ? { ...activeClass, students: updatedStudents, recentPickHistory: newHistory } : c));
     }
-    
-    if (activeQuestion) {
-        setTimeout(() => {
-             setShowResultOverlay(false);
-             setShowQuestionModal(true);
-        }, 1000);
-    }
+    // FIX: Removed automatic redirect to question modal to prevent infinite loop.
+    // The user must click "Answer Question" button manually.
   };
 
   const applyKnowledgeKingLogic = (students: Student[]): Student[] => {
@@ -534,7 +527,11 @@ function App() {
             maxGroupLuckyPoints={settings.maxGroupLuckyPoints}
             onClose={() => setCurrentView('SESSION')}
             onComplete={handleGameComplete}
-            onOpenQuestion={() => { setShowResultOverlay(false); setShowQuestionModal(true); }}
+            onOpenQuestion={() => { 
+                setShowResultOverlay(false);
+                setCurrentView('SESSION'); // Important: Unmount Game View
+                setShowQuestionModal(true); 
+            }}
             onAddScore={handleAddScore}
             onPendingAdd={() => {
                 if(!pendingStudents.find(s=>s.id===winner.id)) { setPendingStudents(prev=>[...prev, winner]); showToast(`Đã thêm ${winner.name} vào danh sách chờ!`, 'success'); } setCurrentView('SESSION');
