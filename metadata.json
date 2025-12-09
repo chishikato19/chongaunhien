@@ -1,5 +1,7 @@
 {
-  "name": "Chọn ngẫu nhiên V1.9",
-  "description": "A feature-rich random student picker with gamification, multiple visualization modes (Wheel, Race, Slots), and fairness tracking. Frontend-only using LocalStorage.",
-  "requestFramePermissions": []
+  "name": "ClassRandomizer V2.2 (King Aura)",
+  "description": "Updates include Knowledge King Aura, Rank Statistics, Shop Data Cloud Sync, and UI Improvements.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

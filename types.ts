@@ -1,4 +1,5 @@
 
+
 export type Gender = 'M' | 'F';
 
 export interface Student {
@@ -6,10 +7,15 @@ export interface Student {
   name: string;
   gender: Gender;
   avatar: string; // Emoji char
-  score: number;
+  score: number; // Current Session/Term Score
+  cumulativeScore?: number; // Lifetime Score / XP
+  balance?: number; // NEW: Currency for Shop
+  unlockedAvatars?: string[]; // NEW: Avatars bought from shop
   tags: string[]; // e.g., 'absent', 'answered'
   lastPickedDate: number | null; // Timestamp
   group?: string; // Group name (e.g., "Group 1")
+  achievements?: string[]; // List of unlocked badge IDs
+  isAbsent?: boolean; // Attendance status
 }
 
 export interface ClassGroup {
@@ -50,13 +56,14 @@ export enum SelectionLogic {
 }
 
 // --- NEW QUESTION TYPES ---
-export type QuestionType = 'MCQ' | 'ESSAY';
+export type QuestionType = 'MCQ' | 'ESSAY' | 'SEQUENCE' | 'MATCHING';
 
 export interface Question {
   id: string;
   content: string;
   type: QuestionType;
-  options?: string[]; // Only for MCQ
+  options?: string[]; // For MCQ or SEQUENCE
+  pairs?: {left: string, right: string}[]; // For MATCHING
   correctAnswer?: number; // Index of correct option (0, 1, 2...) for MCQ
   essayAnswer?: string; // Teacher notes for essay
   isAnswered?: boolean; // Track if question has been used
@@ -77,4 +84,15 @@ export interface Settings {
   themeColor: string;
   allowRepeats: boolean;
   soundEnabled: boolean;
+  // NEW: Customizable Thresholds
+  gameUnlockThresholds: {[key in PresentationMode]?: number};
+  achievementThresholds: {[key: string]: number};
+  // NEW: Templates
+  congratulationTemplate: string;
+  // NEW: Avatar Management
+  commonAvatars: string[];
+  specialAvatars: string[];
+  // NEW: Shop & Timer
+  avatarPrice: number;
+  warningSeconds: number; // Countdown warning threshold
 }
