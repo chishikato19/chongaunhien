@@ -24,12 +24,22 @@ export interface Student {
   academicLevel?: AcademicLevel;
 }
 
+// NEW V2.6: Question Bank Interface
+export interface QuestionBank {
+    id: string;
+    name: string;
+    description?: string;
+    dateCreated: number;
+}
+
 export interface ClassGroup {
   id: string;
   name: string;
   students: Student[];
   // NEW: Track recent picks to avoid repetition
   recentPickHistory?: string[]; 
+  // NEW V2.6: Active Question Bank for this class
+  activeBankId?: string; 
 }
 
 export interface Video {
@@ -79,6 +89,8 @@ export interface Question {
   image?: string; 
   // NEW
   difficulty?: Difficulty;
+  // NEW V2.6
+  bankId?: string;
 }
 
 export interface Settings {

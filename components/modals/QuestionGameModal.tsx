@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Question, Student } from '../../types';
 import { MathRenderer } from '../MathRenderer';
-import { Play, X, Award, ShieldAlert, GripVertical, Check, ArrowLeft } from 'lucide-react';
+import { Play, X, Award, ShieldAlert, GripVertical, Check, ArrowRight } from 'lucide-react';
 import { playTick, playWin } from '../../services/sound';
 
 interface QuestionGameModalProps {
@@ -9,10 +10,11 @@ interface QuestionGameModalProps {
     winner: Student | null;
     onClose: () => void;
     onStartRandomizer: () => void;
-    onCorrectAnswer: () => void; // Parent handles scoring
+    onCorrectAnswer: () => void; // Proceed to scoring (Correct)
+    onWrongAnswer: () => void;   // Proceed to scoring (Wrong/Manual)
 }
 
-export const QuestionGameModal: React.FC<QuestionGameModalProps> = ({ question, winner, onClose, onStartRandomizer, onCorrectAnswer }) => {
+export const QuestionGameModal: React.FC<QuestionGameModalProps> = ({ question, winner, onClose, onStartRandomizer, onCorrectAnswer, onWrongAnswer }) => {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [answerStatus, setAnswerStatus] = useState<'IDLE' | 'CORRECT' | 'WRONG'>('IDLE');
     
@@ -62,6 +64,7 @@ export const QuestionGameModal: React.FC<QuestionGameModalProps> = ({ question, 
         } else {
             setAnswerStatus('WRONG');
             playTick();
+            // Optional: Auto proceed on wrong? Or let user click "Next" manually.
         }
     };
 
@@ -146,10 +149,6 @@ export const QuestionGameModal: React.FC<QuestionGameModalProps> = ({ question, 
                     const rightEl = rightRefs.current[rightIdx];
                     if (!leftEl || !rightEl) return null;
 
-                    // Get relative coordinates within the modal content area?
-                    // Simpler: use getBoundingClientRect but we need relative to SVG container
-                    // Actually, the SVG is absolute inset-0 of the container. 
-                    // Let's assume the container is relative.
                     const container = leftEl.closest('.matching-container');
                     if (!container) return null;
                     const cRect = container.getBoundingClientRect();
@@ -171,17 +170,13 @@ export const QuestionGameModal: React.FC<QuestionGameModalProps> = ({ question, 
                         />
                     );
                 })}
-                {matchingSelectedLeft !== null && leftRefs.current[matchingSelectedLeft] && (
-                     // Draw a pending line to mouse? (Too complex for now)
-                     // Just highlight the node
-                     null
-                )}
             </svg>
         );
     };
 
     return (
         <div className="fixed inset-0 z-[110] bg-white flex flex-col">
+            {/* Header */}
             <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center gap-4">
                    <span className={`px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest text-white shadow-md
@@ -193,7 +188,28 @@ export const QuestionGameModal: React.FC<QuestionGameModalProps> = ({ question, 
                 <button onClick={onClose} className="p-3 bg-gray-200 hover:bg-gray-300 rounded-full text-gray-600"><X size={28}/></button>
             </div>
 
-            <div className="flex-grow flex flex-col items-center justify-center p-8 overflow-y-auto bg-white relative">
+            {/* Main Content */}
+            <div className="flex-grow flex flex-col items-center justify-start p-8 overflow-y-auto bg-white relative">
+                
+                {/* Winner Display (If picked) */}
+                {winner && (
+                    <div className="w-full max-w-2xl mx-auto mb-8 bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 flex items-center justify-between animate-fade-in-up shadow-sm">
+                         <div className="flex items-center gap-4">
+                             <span className="text-4xl">{winner.avatar}</span>
+                             <div className="flex flex-col">
+                                 <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Người trả lời</span>
+                                 <span className="font-black text-indigo-900 text-xl">{winner.name}</span>
+                             </div>
+                         </div>
+                         <button 
+                            onClick={onWrongAnswer} 
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"
+                         >
+                             Chấm điểm <ArrowRight size={16}/>
+                         </button>
+                    </div>
+                )}
+
                 <div className="max-w-5xl w-full text-center mb-8 animate-fade-in-up">
                     <h2 className="text-3xl md:text-5xl font-black text-gray-800 leading-tight mb-6">
                         <MathRenderer text={question.content} />
@@ -335,19 +351,6 @@ export const QuestionGameModal: React.FC<QuestionGameModalProps> = ({ question, 
                         </div>
                     )}
                 </div>
-                
-                {winner && (
-                    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20">
-                         <div className="bg-white px-6 py-3 rounded-full shadow-2xl border-2 border-indigo-100 flex items-center gap-4 animate-slide-up">
-                             <span className="text-3xl">{winner.avatar}</span>
-                             <div className="flex flex-col">
-                                 <span className="text-xs text-gray-500 font-bold uppercase">Người chơi</span>
-                                 <span className="font-black text-gray-800 text-lg">{winner.name}</span>
-                             </div>
-                             <button onClick={onClose} className="ml-4 p-2 bg-gray-100 hover:bg-red-100 hover:text-red-500 rounded-full"><X size={16}/></button>
-                         </div>
-                    </div>
-                )}
             </div>
         </div>
     );

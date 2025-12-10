@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { ClassGroup, Student, Gender, Settings, AcademicLevel } from '../types';
+import { ClassGroup, Student, Gender, Settings, AcademicLevel, QuestionBank } from '../types';
 import { getUniqueRandomAvatar, generateId } from '../services/storage.service';
-import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2, RotateCcw, CheckSquare, Square, Layers, Save, UserX, UserCheck, Shield, Sparkles, GraduationCap } from 'lucide-react';
+import { Plus, Trash2, Edit2, Upload, Download, Users, UserPlus, FileSpreadsheet, X, Grid2X2, RotateCcw, CheckSquare, Square, Layers, Save, UserX, UserCheck, Shield, Sparkles, GraduationCap, Folder } from 'lucide-react';
 
 interface ClassManagerProps {
   classes: ClassGroup[];
   activeClassId: string | null;
   onUpdateClasses: (classes: ClassGroup[]) => void;
   onSetActive: (id: string) => void;
-  settings: Settings; // Pass settings to access dynamic avatar pool
+  settings: Settings; 
+  questionBanks: QuestionBank[]; // New prop
 }
 
 // Badge Definitions for UI
@@ -38,7 +39,7 @@ const ACADEMIC_LABELS: {[key in AcademicLevel]: string} = {
     'FAIL': 'CĐ'
 };
 
-const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onUpdateClasses, onSetActive, settings }) => {
+const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onUpdateClasses, onSetActive, settings, questionBanks }) => {
   const [newClassName, setNewClassName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importText, setImportText] = useState('');
@@ -60,7 +61,8 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
       id: generateId(),
       name: newClassName,
       students: [],
-      recentPickHistory: []
+      recentPickHistory: [],
+      activeBankId: 'default'
     };
     onUpdateClasses([...classes, newClass]);
     setNewClassName('');
@@ -77,9 +79,14 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
     }
   };
 
+  const updateClassBank = (bankId: string) => {
+      if(!activeClass) return;
+      const updated = { ...activeClass, activeBankId: bankId };
+      onUpdateClasses(classes.map(c => c.id === activeClassId ? updated : c));
+  };
+
   const resetClassScores = () => {
       if (!activeClass) return;
-      
       if (window.confirm(`Xác nhận reset ĐIỂM PHIÊN (Current Score) của lớp "${activeClass.name}" về 0?\nĐiểm Tích Lũy (XP) sẽ được giữ nguyên.`)) {
           const updatedStudents = activeClass.students.map(s => ({ 
               ...s, 
@@ -94,12 +101,11 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
 
   const resetClassXP = () => {
       if (!activeClass) return;
-      
       if (window.confirm(`CẢNH BÁO: Bạn có chắc chắn muốn reset ĐIỂM TÍCH LŨY (XP) của toàn bộ học sinh trong lớp "${activeClass.name}" về 0 không?\nHành động này không thể hoàn tác và sẽ khóa lại các trò chơi yêu cầu XP.`)) {
           const updatedStudents = activeClass.students.map(s => ({ 
               ...s, 
               cumulativeScore: 0,
-              achievements: [] // Clear achievements too as they are tied to XP mostly
+              achievements: []
           }));
           const updatedClass = { ...activeClass, students: updatedStudents };
           onUpdateClasses(classes.map(c => c.id === activeClassId ? updatedClass : c));
@@ -150,7 +156,6 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
         gender = 'F';
       }
       
-      // Basic Detection for Level in import? E.g. "Nguyen Van A [Tốt]"
       if (name.includes('[Tốt]')) level = 'GOOD';
       else if (name.includes('[Khá]')) level = 'FAIR';
       else if (name.includes('[CĐ]')) level = 'FAIL';
@@ -285,7 +290,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
         
         <div className="flex gap-2 w-full md:w-auto">
            <select 
-             className="border border-gray-300 rounded-lg px-3 py-2 flex-grow focus:ring-2 focus:ring-indigo-500"
+             className="border border-gray-300 rounded-lg px-3 py-2 flex-grow focus:ring-2 focus:ring-indigo-500 font-bold text-gray-700"
              value={activeClassId || ''}
              onChange={(e) => {
                  onSetActive(e.target.value);
@@ -321,12 +326,27 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
       {activeClass ? (
         <>
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 border-b pb-4 items-start sm:items-center flex-shrink-0">
-                <button onClick={() => setIsImporting(!isImporting)} className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-md hover:bg-green-100 text-sm font-medium">
-                    <FileSpreadsheet size={16} /> Nhập Excel
-                </button>
-                
+                {/* Active Question Bank Selector */}
+                <div className="flex items-center gap-2 bg-pink-50 p-1.5 rounded-lg border border-pink-100">
+                    <Folder size={16} className="text-pink-600 ml-2"/>
+                    <span className="text-xs font-bold text-pink-700 hidden lg:inline">Bộ câu hỏi:</span>
+                    <select 
+                        className="text-sm bg-transparent border-none font-bold text-gray-700 outline-none w-32 md:w-40"
+                        value={activeClass.activeBankId || 'default'}
+                        onChange={(e) => updateClassBank(e.target.value)}
+                    >
+                        {questionBanks.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                    </select>
+                </div>
+
                 <div className="w-px h-6 bg-gray-300 hidden sm:block"></div>
 
+                <button onClick={() => setIsImporting(!isImporting)} className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-md hover:bg-green-100 text-sm font-medium">
+                    <FileSpreadsheet size={16} /> <span className="hidden xl:inline">Nhập Excel</span>
+                </button>
+                
                 <div className="flex items-center gap-2 bg-purple-50 p-1 rounded-md">
                      <span className="text-xs font-semibold text-purple-700 pl-2 hidden md:inline">Chia nhóm:</span>
                      <input 
@@ -351,7 +371,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
                         }} 
                         className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${isSelectionMode ? 'bg-blue-600 text-white' : 'bg-blue-200 text-blue-800 hover:bg-blue-300'}`}
                      >
-                        <Layers size={16} /> Chọn nhóm
+                        <Layers size={16} />
                      </button>
                 </div>
 
@@ -364,7 +384,6 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
                         className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm font-medium transition-colors ${isAttendanceMode ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
                      >
                         {isAttendanceMode ? <UserCheck size={16} /> : <UserX size={16} />} 
-                        Điểm danh
                      </button>
                 </div>
                 
@@ -506,7 +525,7 @@ const ClassManager: React.FC<ClassManagerProps> = ({ classes, activeClassId, onU
           </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Modal (Keeping existing logic) */}
       {editingStudent && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl overflow-y-auto max-h-[90vh]">

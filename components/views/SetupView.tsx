@@ -1,7 +1,6 @@
-
 import React, { useRef } from 'react';
 import { Users, HelpCircle, Save, RefreshCw, CloudUpload, CloudDownload, Download, Upload } from 'lucide-react';
-import { ClassGroup, Question, Settings } from '../../types';
+import { ClassGroup, Question, Settings, QuestionBank } from '../../types';
 import ClassManager from '../ClassManager';
 import QuestionManager from '../QuestionManager';
 import { PlayCircle } from 'lucide-react';
@@ -9,6 +8,7 @@ import { PlayCircle } from 'lucide-react';
 interface SetupViewProps {
     classes: ClassGroup[];
     questions: Question[];
+    questionBanks: QuestionBank[]; // New
     activeClassId: string | null;
     activeClass: ClassGroup | undefined;
     setupTab: 'CLASSES' | 'QUESTIONS';
@@ -18,6 +18,7 @@ interface SetupViewProps {
     setSetupTab: (tab: 'CLASSES' | 'QUESTIONS') => void;
     handleUpdateClasses: (c: ClassGroup[]) => void;
     handleUpdateQuestions: (q: Question[]) => void;
+    handleUpdateBanks: (b: QuestionBank[]) => void; // New
     handleSetActiveClass: (id: string) => void;
     setCloudUrl: (url: string) => void;
     handleSaveCloudUrl: () => void;
@@ -29,8 +30,8 @@ interface SetupViewProps {
 }
 
 const SetupView: React.FC<SetupViewProps> = ({
-    classes, questions, activeClassId, activeClass, setupTab, settings, cloudUrl, isSyncing,
-    setSetupTab, handleUpdateClasses, handleUpdateQuestions, handleSetActiveClass,
+    classes, questions, questionBanks, activeClassId, activeClass, setupTab, settings, cloudUrl, isSyncing,
+    setSetupTab, handleUpdateClasses, handleUpdateQuestions, handleUpdateBanks, handleSetActiveClass,
     setCloudUrl, handleSaveCloudUrl, handleCloudUpload, handleCloudDownload, handleExportData, handleImportData, startSession
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,9 +55,9 @@ const SetupView: React.FC<SetupViewProps> = ({
             </div>
             <div className="flex-grow min-h-0">
                 {setupTab === 'CLASSES' ? (
-                    <ClassManager classes={classes} activeClassId={activeClassId} onUpdateClasses={handleUpdateClasses} onSetActive={handleSetActiveClass} settings={settings} />
+                    <ClassManager classes={classes} activeClassId={activeClassId} onUpdateClasses={handleUpdateClasses} onSetActive={handleSetActiveClass} settings={settings} questionBanks={questionBanks} />
                 ) : (
-                    <QuestionManager questions={questions} onUpdateQuestions={handleUpdateQuestions} />
+                    <QuestionManager questions={questions} onUpdateQuestions={handleUpdateQuestions} questionBanks={questionBanks} onUpdateBanks={handleUpdateBanks} />
                 )}
             </div>
             {setupTab === 'CLASSES' && activeClass && (

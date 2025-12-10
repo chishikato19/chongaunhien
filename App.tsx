@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Play, Settings as SettingsIcon, Mic, Maximize, Minimize, Clock, RotateCcw, LogOut, HelpCircle, BookOpen, Hand, Youtube, X, PartyPopper, ShoppingBag, Info, AlertCircle, Trophy } from 'lucide-react';
 import * as Storage from './services/storage.service';
-import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings, Question } from './types';
+import { ClassGroup, Student, PresentationMode, SelectionLogic, Settings as GameSettings, Question, QuestionBank } from './types';
 import VideoLibrary from './components/VideoLibrary';
 import { NoiseMonitor } from './components/NoiseMonitor';
 import { playTick, playWin } from './services/sound';
@@ -18,6 +18,7 @@ import { fireConfetti } from './utils/animationUtils';
 function App() {
   const [classes, setClasses] = useState<ClassGroup[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]); 
+  const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>([]); // New V2.6
   const [activeClassId, setActiveClassId] = useState<string | null>(null);
   
   const [currentView, setCurrentView] = useState<'SETUP' | 'SESSION' | 'GAME' | 'SUMMARY'>('SETUP');
@@ -69,6 +70,7 @@ function App() {
   useEffect(() => {
     setClasses(Storage.getClasses());
     setQuestions(Storage.getQuestions());
+    setQuestionBanks(Storage.getQuestionBanks()); // New V2.6
     setCloudUrl(Storage.getCloudUrl()); 
     const savedActiveId = Storage.getActiveClassId();
     if (savedActiveId) setActiveClassId(savedActiveId);
@@ -103,6 +105,7 @@ function App() {
 
   const handleUpdateClasses = (newClasses: ClassGroup[]) => { setClasses(newClasses); Storage.saveClasses(newClasses); };
   const handleUpdateQuestions = (newQuestions: Question[]) => { setQuestions(newQuestions); Storage.saveQuestions(newQuestions); };
+  const handleUpdateBanks = (newBanks: QuestionBank[]) => { setQuestionBanks(newBanks); Storage.saveQuestionBanks(newBanks); }; // New
   const handleSetActiveClass = (id: string) => { setActiveClassId(id); Storage.setActiveClassId(id); };
   const updateSettings = (newSettings: Partial<GameSettings>) => { const updated = { ...settings, ...newSettings }; setSettings(updated); Storage.saveSettings(updated); };
   
@@ -110,9 +113,11 @@ function App() {
 
   const handleCloudUpload = async () => {
       if(!cloudUrl) { showToast("Vui lòng nhập Google Script URL trước!", 'error'); return; }
-      if(!window.confirm("Bạn có chắc muốn lưu TOÀN BỘ dữ liệu lên Google Sheet?")) return;
+      if(!window.confirm("Bạn có chắc muốn lưu TOÀN BỘ dữ liệu (Lớp, Câu hỏi, Shop, Danh hiệu...) lên Google Sheet?")) return;
       setIsSyncing(true);
-      const fullData = { classes: Storage.getClasses(), settings: Storage.getSettings(), questions: Storage.getQuestions(), videos: Storage.getVideos() };
+      
+      const fullData = Storage.getAllDataForBackup();
+      
       const res = await Storage.syncToCloud(cloudUrl, fullData);
       setIsSyncing(false);
       if(res.success) showToast(res.message, 'success'); else showToast(res.message, 'error');
@@ -129,6 +134,7 @@ function App() {
           if(data.classes) { setClasses(data.classes); Storage.saveClasses(data.classes); }
           if(data.settings) { setSettings(data.settings); Storage.saveSettings(data.settings); }
           if(data.questions) { setQuestions(data.questions); Storage.saveQuestions(data.questions); }
+          if(data.banks) { setQuestionBanks(data.banks); Storage.saveQuestionBanks(data.banks); } // New
           if(data.videos) { Storage.saveVideos(data.videos); }
           showToast(res.message, 'success');
       } else { showToast(res.message, 'error'); }
@@ -172,7 +178,6 @@ function App() {
     // 3. Conditional Logic based on Question Difficulty
     if (activeQuestion && activeQuestion.difficulty) {
         if (activeQuestion.difficulty === 'HARD') {
-            // Hard -> GOOD only. If none, allow FAIR.
             const goodStudents = eligiblePool.filter(s => s.academicLevel === 'GOOD');
             if (goodStudents.length > 0) eligiblePool = goodStudents;
             else {
@@ -180,11 +185,9 @@ function App() {
                  if (fairStudents.length > 0) eligiblePool = fairStudents;
             }
         } else if (activeQuestion.difficulty === 'MEDIUM') {
-            // Medium -> GOOD, FAIR, PASS. Exclude FAIL.
             const mediumPool = eligiblePool.filter(s => s.academicLevel !== 'FAIL');
             if (mediumPool.length > 0) eligiblePool = mediumPool;
         } else {
-            // Easy -> PASS, FAIL.
             const easyPool = eligiblePool.filter(s => s.academicLevel === 'PASS' || s.academicLevel === 'FAIL');
             if (easyPool.length > 0) eligiblePool = easyPool;
         }
@@ -192,8 +195,6 @@ function App() {
 
     if (eligiblePool.length === 0) { showToast("Không còn ai phù hợp để gọi!", 'error'); return; }
 
-    // 4. Weighted Random based on Score
-    // Formula: Weight = 1 / (Score + 1). Lower score = Higher weight.
     let totalWeight = 0;
     const weightedStudents = eligiblePool.map(s => {
         const weight = 1 / ((s.score || 0) + 1);
@@ -214,7 +215,6 @@ function App() {
 
     setWinner(pickedWinner);
     let visualCandidates = activeClass.students.filter(s => !s.isAbsent);
-    // Ensure visual feedback includes winner
     if (!visualCandidates.find(s => s.id === pickedWinner.id)) visualCandidates.push(pickedWinner);
     setRoundCandidates(visualCandidates);
 
@@ -291,12 +291,11 @@ function App() {
   };
 
   const handleGameComplete = () => {
-    setShowResultOverlay(true); setSessionPicks(prev => prev + 1);
+    // 1. Update pick history
     if (winner && activeClass && !isGroupSpin) {
         const now = Date.now();
-        // Update History
         const currentHistory = activeClass.recentPickHistory || [];
-        const newHistory = [winner.id, ...currentHistory].slice(0, 5); // Keep last 5
+        const newHistory = [winner.id, ...currentHistory].slice(0, 5); 
 
         const updatedStudents = activeClass.students.map(s => {
              if (s.id === winner.id) {
@@ -308,8 +307,19 @@ function App() {
         });
         handleUpdateClasses(classes.map(c => c.id === activeClass.id ? { ...activeClass, students: updatedStudents, recentPickHistory: newHistory } : c));
     }
-    // FIX: Removed automatic redirect to question modal to prevent infinite loop.
-    // The user must click "Answer Question" button manually.
+
+    setSessionPicks(prev => prev + 1);
+
+    // 2. Navigation Logic
+    if (activeQuestion) {
+        // FLOW: If answering a question, go back to Question Modal with winner set
+        setShowResultOverlay(false); 
+        setCurrentView('SESSION'); 
+        setShowQuestionModal(true);
+    } else {
+        // FLOW: Normal spin, show result overlay immediately
+        setShowResultOverlay(true);
+    }
   };
 
   const applyKnowledgeKingLogic = (students: Student[]): Student[] => {
@@ -370,7 +380,7 @@ function App() {
                  setScoreAnimation({ value: 0, visible: false }); 
                  setShowQuestionModal(false); 
                  setActiveQuestion(null); 
-                 setWinner(null); // Fix: Reset winner so the button appears again
+                 setWinner(null); 
              }, 1800);
         }
     }
@@ -384,7 +394,7 @@ function App() {
                   ...s,
                   balance: (s.balance || 0) - cost,
                   unlockedAvatars: [...(s.unlockedAvatars || []), avatar],
-                  avatar: avatar // Auto equip
+                  avatar: avatar 
               };
           }
           return s;
@@ -428,9 +438,21 @@ function App() {
   };
 
   const handleOpenQuestion = () => {
-      setWinner(null); // Fix: Reset winner
-      const avail = questions.filter(q => !q.isAnswered);
-      if (avail.length === 0) { showToast("Hết câu hỏi!", 'error'); return; }
+      setWinner(null); 
+      // V2.6 Logic: Filter by Active Bank ID
+      const activeBankId = activeClass?.activeBankId || 'default';
+      const avail = questions.filter(q => (q.bankId || 'default') === activeBankId && !q.isAnswered);
+      
+      if (avail.length === 0) { 
+          // Friendly fallback message if bank is empty but default has questions
+          if (activeBankId !== 'default' && questions.filter(q => q.bankId === 'default' && !q.isAnswered).length > 0) {
+               showToast("Bộ câu hỏi này đã hết! Hãy chọn bộ khác trong Cài đặt Lớp.", 'error');
+          } else {
+               showToast("Hết câu hỏi chưa trả lời!", 'error'); 
+          }
+          return; 
+      }
+      
       const q = avail[Math.floor(Math.random() * avail.length)];
       setActiveQuestion(q);
       setShowQuestionModal(true);
@@ -455,6 +477,12 @@ function App() {
       
       setShowQuestionModal(false);
       setShowResultOverlay(true);
+      setCurrentView('GAME'); 
+  };
+  
+  const onQuestionWrong = () => {
+      setShowQuestionModal(false);
+      setShowResultOverlay(true);
       setCurrentView('GAME');
   };
 
@@ -467,9 +495,9 @@ function App() {
   };
 
   const handleExportData = () => {
-      const data = { version: 2.5, date: new Date().toISOString(), classes: Storage.getClasses(), settings: Storage.getSettings(), activeClassId: Storage.getActiveClassId(), questions: Storage.getQuestions(), videos: Storage.getVideos() };
+      const data = Storage.getAllDataForBackup();
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-      a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+      a.download = `class_randomizer_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
   };
 
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -481,6 +509,7 @@ function App() {
               if (data.classes) { setClasses(data.classes); Storage.saveClasses(data.classes); }
               if (data.settings) { setSettings(data.settings); Storage.saveSettings(data.settings); }
               if (data.questions) { setQuestions(data.questions); Storage.saveQuestions(data.questions); }
+              if (data.banks) { setQuestionBanks(data.banks); Storage.saveQuestionBanks(data.banks); } // New
               showToast("Nhập dữ liệu thành công!", 'success');
           } catch(err) { showToast("Lỗi file!", 'error'); }
       };
@@ -507,6 +536,7 @@ function App() {
             onClose={() => setShowQuestionModal(false)} 
             onStartRandomizer={startRandomizer} 
             onCorrectAnswer={onQuestionCorrect} 
+            onWrongAnswer={onQuestionWrong}
         />
       )}
 
@@ -531,7 +561,7 @@ function App() {
             onComplete={handleGameComplete}
             onOpenQuestion={() => { 
                 setShowResultOverlay(false);
-                setCurrentView('SESSION'); // Important: Unmount Game View
+                setCurrentView('SESSION'); 
                 setShowQuestionModal(true); 
             }}
             onAddScore={handleAddScore}
@@ -541,7 +571,6 @@ function App() {
           />
       )}
 
-      {/* Congratulation Modal */}
       {congratulationData && (
           <div className="fixed inset-0 z-[120] bg-black/70 flex items-center justify-center p-4" onClick={() => setCongratulationData(null)}>
               <div className="bg-white rounded-3xl p-8 max-w-lg w-full text-center relative animate-bounce-in border-8 border-yellow-400" onClick={e => e.stopPropagation()}>
@@ -563,7 +592,6 @@ function App() {
           </div>
       )}
 
-      {/* Changelog Modal */}
       {showChangelog && (
           <div className="fixed inset-0 z-[130] bg-black/60 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
@@ -596,7 +624,6 @@ function App() {
           </div>
       )}
 
-      {/* End Session Confirmation Modal */}
       {showEndConfirm && (
           <div className="fixed inset-0 z-[150] bg-black/50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl text-center">
@@ -622,7 +649,7 @@ function App() {
                   <div className="flex items-center gap-2"><div className="bg-indigo-600 text-white p-1.5 rounded-lg"><Play size={20} fill="currentColor"/></div>
                       <span className="font-bold text-lg tracking-tight text-gray-800 flex items-center gap-2">
                           ClassRandomizer 
-                          <button onClick={() => setShowChangelog(true)} className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-0.5 rounded font-bold cursor-pointer transition-colors">V2.3</button>
+                          <button onClick={() => setShowChangelog(true)} className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-0.5 rounded font-bold cursor-pointer transition-colors">V2.6</button>
                       </span>
                   </div>
                   <div className="flex items-center gap-1 md:gap-2">
@@ -644,8 +671,8 @@ function App() {
       <main className="container mx-auto px-4 py-6 flex-grow flex flex-col min-h-0">
           {currentView === 'SETUP' && (
               <SetupView 
-                classes={classes} questions={questions} activeClassId={activeClassId} activeClass={activeClass} setupTab={setupTab} settings={settings} cloudUrl={cloudUrl} isSyncing={isSyncing}
-                setSetupTab={setSetupTab} handleUpdateClasses={handleUpdateClasses} handleUpdateQuestions={handleUpdateQuestions} handleSetActiveClass={handleSetActiveClass}
+                classes={classes} questions={questions} questionBanks={questionBanks} activeClassId={activeClassId} activeClass={activeClass} setupTab={setupTab} settings={settings} cloudUrl={cloudUrl} isSyncing={isSyncing}
+                setSetupTab={setSetupTab} handleUpdateClasses={handleUpdateClasses} handleUpdateQuestions={handleUpdateQuestions} handleUpdateBanks={handleUpdateBanks} handleSetActiveClass={handleSetActiveClass}
                 setCloudUrl={setCloudUrl} handleSaveCloudUrl={handleSaveCloudUrl} handleCloudUpload={handleCloudUpload} handleCloudDownload={handleCloudDownload} handleExportData={handleExportData} handleImportData={handleImportData} startSession={startSession}
               />
           )}
@@ -676,6 +703,7 @@ function App() {
           )}
       </main>
 
+      {/* Manual Pick Modal (Keep existing) */}
       {showManualPick && activeClass && (
           <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
               <div className="bg-white rounded-xl w-full max-w-lg p-0 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
@@ -689,10 +717,10 @@ function App() {
           </div>
       )}
 
+      {/* Timer Modal (Keep existing) */}
       {showTimerModal && (
           <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
               <div className={`${isTimerFullScreen ? 'fixed inset-0 w-full h-full max-w-none rounded-none bg-indigo-900 text-white flex flex-col justify-center' : 'bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative'}`}>
-                   {/* Fullscreen & Close Buttons requested by user */}
                    <button onClick={() => setShowTimerModal(false)} className="absolute top-4 right-4 p-2 bg-gray-200 text-gray-800 hover:bg-red-500 hover:text-white rounded-full z-20" title="Đóng"><X size={24}/></button>
                    <button onClick={() => setIsTimerFullScreen(!isTimerFullScreen)} className="absolute top-4 left-4 p-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded-full z-20" title="Toàn màn hình">{isTimerFullScreen ? <Minimize size={24}/> : <Maximize size={24}/>}</button>
                    
@@ -731,8 +759,6 @@ function App() {
               </div>
           </div>
       )}
-
-      {/* Footer Version Info Removed, Moved to Header */}
     </div>
   );
 }
