@@ -370,6 +370,7 @@ function App() {
                  setScoreAnimation({ value: 0, visible: false }); 
                  setShowQuestionModal(false); 
                  setActiveQuestion(null); 
+                 setWinner(null); // Fix: Reset winner so the button appears again
              }, 1800);
         }
     }
@@ -427,6 +428,7 @@ function App() {
   };
 
   const handleOpenQuestion = () => {
+      setWinner(null); // Fix: Reset winner
       const avail = questions.filter(q => !q.isAnswered);
       if (avail.length === 0) { showToast("Hết câu hỏi!", 'error'); return; }
       const q = avail[Math.floor(Math.random() * avail.length)];

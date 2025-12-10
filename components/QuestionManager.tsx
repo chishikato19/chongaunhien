@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Question, QuestionType, Difficulty } from '../types';
 import { generateId } from '../services/storage.service';
-import { Plus, Trash2, HelpCircle, AlertCircle, Save, RefreshCcw, Edit, X, Calculator, GripVertical, Shuffle, BarChart } from 'lucide-react';
+import { Plus, Trash2, HelpCircle, AlertCircle, Save, RotateCcw, Edit, X, Calculator, GripVertical } from 'lucide-react';
 import { MathRenderer } from './MathRenderer';
 
 interface QuestionManagerProps {
@@ -47,10 +47,11 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
     };
 
     const resetQuestionStatus = () => {
-        if(window.confirm("Bạn có chắc muốn đặt lại trạng thái 'Đã trả lời' cho tất cả câu hỏi?")) {
+        if(questions.length === 0) return;
+        if(window.confirm(`Bạn có chắc muốn đặt lại trạng thái "Chưa trả lời" cho toàn bộ ${questions.length} câu hỏi?`)) {
             const resetQuestions = questions.map(q => ({ ...q, isAnswered: false }));
             onUpdateQuestions(resetQuestions);
-            alert("Đã reset trạng thái câu hỏi!");
+            alert("Đã làm mới trạng thái câu hỏi thành công!");
         }
     };
 
@@ -313,7 +314,7 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                     <HelpCircle className="text-pink-600" /> Ngân Hàng Câu Hỏi
                 </h2>
-                <div className="flex bg-gray-100 p-1 rounded-lg">
+                <div className="flex bg-gray-100 p-1 rounded-lg items-center">
                     <button 
                         onClick={() => setActiveTab('LIST')}
                         className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'LIST' ? 'bg-white shadow text-pink-600' : 'text-gray-500 hover:bg-gray-200'}`}
@@ -325,6 +326,14 @@ const QuestionManager: React.FC<QuestionManagerProps> = ({ questions, onUpdateQu
                         className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'IMPORT' ? 'bg-white shadow text-pink-600' : 'text-gray-500 hover:bg-gray-200'}`}
                     >
                         Nhập từ Word/Text
+                    </button>
+                    <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                    <button 
+                        onClick={resetQuestionStatus}
+                        className="px-3 py-2 text-gray-500 hover:text-indigo-600 hover:bg-white hover:shadow-sm rounded-md transition-all"
+                        title="Đặt lại trạng thái 'Chưa trả lời' cho tất cả"
+                    >
+                        <RotateCcw size={18} />
                     </button>
                 </div>
             </div>
