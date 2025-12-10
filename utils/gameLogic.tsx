@@ -51,7 +51,14 @@ export const HELP_CONTENT = [
         title: "2. Google Apps Script (Cloud Sync)",
         content: (
             <div className="space-y-2 text-sm text-gray-600">
-                <p>Để đồng bộ dữ liệu giữa các máy, bạn cần tạo một Google Apps Script. Các bước thực hiện:</p>
+                <p>Tính năng đồng bộ cho phép lưu trữ an toàn các dữ liệu sau:</p>
+                <ul className="list-disc pl-5 font-bold text-gray-700">
+                    <li>Danh sách Lớp, Học sinh, Điểm số.</li>
+                    <li>Ngân hàng Câu hỏi & Video.</li>
+                    <li>Cấu hình Shop (Vật phẩm đã mua của học sinh).</li>
+                    <li>Danh hiệu & Thành tích.</li>
+                </ul>
+                <p>Để kích hoạt, bạn cần tạo một Google Apps Script:</p>
                 <ol className="list-decimal pl-5 space-y-1">
                     <li>Truy cập <a href="https://script.google.com/" target="_blank" className="text-blue-600 underline">script.google.com</a> và tạo dự án mới.</li>
                     <li>Xóa toàn bộ code cũ và dán đoạn code bên dưới vào.</li>

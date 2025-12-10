@@ -1,14 +1,24 @@
-import { ClassGroup, Settings, Student, Question, Video, PresentationMode } from '../types';
+import { ClassGroup, Settings, Student, Question, Video, PresentationMode, QuestionBank } from '../types';
 
 const CLASSES_KEY = 'cr_classes';
 const SETTINGS_KEY = 'cr_settings';
 const ACTIVE_CLASS_KEY = 'cr_active_class_id';
 const QUESTIONS_KEY = 'cr_questions';
+const QUESTION_BANKS_KEY = 'cr_question_banks';
 const CLOUD_URL_KEY = 'cr_cloud_url';
 const VIDEOS_KEY = 'cr_videos';
 
 // --- CHANGELOG ---
 export const CHANGELOG = [
+    {
+        version: "2.6",
+        date: "2024-07-15",
+        changes: [
+            "Hệ thống Bộ câu hỏi (Question Banks): Cho phép tạo nhiều bộ câu hỏi khác nhau (VD: Toán Chương 1, Sử 15 phút...).",
+            "Gán Bộ câu hỏi: Giáo viên có thể chọn bộ câu hỏi riêng biệt cho từng lớp học.",
+            "Quản lý: Lọc, thêm, xóa câu hỏi theo từng bộ dễ dàng."
+        ]
+    },
     {
         version: "2.3",
         date: "2024-07-08",
@@ -39,17 +49,6 @@ export const CHANGELOG = [
             "Hệ thống Học Vị: Học việc, Cử nhân, Thạc sĩ, Tiến sĩ, Giáo sư theo mốc điểm.",
             "Nâng cấp Đồng hồ: Tùy chỉnh thời gian (Phút/Giây), Chế độ toàn màn hình.",
             "Hiển thị bảng cập nhật phiên bản khi khởi động."
-        ]
-    },
-    {
-        version: "2.0",
-        date: "2024-07-01",
-        changes: [
-            "Hệ thống Shop: Học sinh dùng điểm tích lũy để mua Avatar đặc biệt.",
-            "Nâng cấp Vòng quay (Wheel): Thêm mũi tên chỉ định và quay chính xác.",
-            "Đồng hồ đếm ngược: Hiệu ứng cảnh báo sắp hết giờ.",
-            "Câu hỏi ghép nối: Thêm đường nối trực quan.",
-            "Chọn nhóm thông minh: Ưu tiên nhóm điểm thấp hơn."
         ]
     }
 ];
@@ -163,6 +162,7 @@ export const getClasses = (): ClassGroup[] => {
       // Migration Logic
       return parsed.map(c => ({
           ...c,
+          activeBankId: c.activeBankId || 'default', // V2.6 Migration
           recentPickHistory: c.recentPickHistory || [],
           students: c.students.map(s => ({
               ...s,
@@ -170,7 +170,8 @@ export const getClasses = (): ClassGroup[] => {
               isAbsent: s.isAbsent ?? false,
               balance: s.balance ?? 0,
               unlockedAvatars: s.unlockedAvatars ?? [],
-              academicLevel: s.academicLevel || 'PASS' // Default to Pass
+              achievements: s.achievements ?? [],
+              academicLevel: s.academicLevel || 'PASS'
           }))
       }));
   } else {
@@ -183,13 +184,32 @@ export const saveClasses = (classes: ClassGroup[]) => {
   localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
 };
 
+// --- QUESTION BANKS & QUESTIONS ---
+
+export const getQuestionBanks = (): QuestionBank[] => {
+    if (typeof window === 'undefined') return [];
+    const data = localStorage.getItem(QUESTION_BANKS_KEY);
+    if (data) return JSON.parse(data);
+    
+    // Default Bank if none exist
+    return [{ id: 'default', name: 'Bộ câu hỏi chung', dateCreated: Date.now() }];
+};
+
+export const saveQuestionBanks = (banks: QuestionBank[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(QUESTION_BANKS_KEY, JSON.stringify(banks));
+};
+
 export const getQuestions = (): Question[] => {
     if (typeof window === 'undefined') return [];
     const data = localStorage.getItem(QUESTIONS_KEY);
     const parsed = data ? JSON.parse(data) : [];
+    
+    // V2.6 Migration: Assign existing questions to 'default' bank
     return parsed.map((q: Question) => ({
         ...q,
-        difficulty: q.difficulty || 'MEDIUM' // Default to Medium
+        difficulty: q.difficulty || 'MEDIUM',
+        bankId: q.bankId || 'default' 
     }));
 };
 
@@ -303,4 +323,17 @@ export const getActiveClassId = (): string | null => {
 export const setActiveClassId = (id: string) => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(ACTIVE_CLASS_KEY, id);
+};
+
+// --- DATA AGGREGATION FOR BACKUP ---
+export const getAllDataForBackup = () => {
+    return {
+        version: "2.6",
+        timestamp: new Date().toISOString(),
+        classes: getClasses(),
+        settings: getSettings(),
+        questions: getQuestions(),
+        banks: getQuestionBanks(),
+        videos: getVideos()
+    };
 };
